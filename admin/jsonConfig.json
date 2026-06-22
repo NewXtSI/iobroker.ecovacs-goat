@@ -24,38 +24,9 @@
       "lg": 4,
       "xl": 4
     },
-    "loglevel": {
-      "type": "select",
-      "label": "loglevel_label",
-      "options": [
-        {
-          "label": "debug",
-          "value": "debug"
-        },
-        {
-          "label": "info",
-          "value": "info"
-        },
-        {
-          "label": "warn",
-          "value": "warn"
-        },
-        {
-          "label": "error",
-          "value": "error"
-        }
-      ],
-      "default": "info",
-      "newLine": true,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 4
-    },
-    "deviceDiscoveryEnabled": {
+    "debugAuth": {
       "type": "checkbox",
-      "label": "device_discovery_label",
+      "label": "debug_auth_label",
       "newLine": true,
       "xs": 12,
       "sm": 12,
@@ -63,14 +34,19 @@
       "lg": 4,
       "xl": 4
     },
-    "deviceDiscoveryInterval": {
-      "type": "number",
-      "label": "device_discovery_interval_label",
-      "placeholder": "Interval in seconds",
-      "min": 10,
-      "max": 3600,
-      "step": 10,
-      "unit": "s",
+    "debugTopics": {
+      "type": "checkbox",
+      "label": "debug_topics_label",
+      "newLine": false,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    },
+    "debugRawTraffic": {
+      "type": "checkbox",
+      "label": "debug_raw_traffic_label",
       "newLine": false,
       "xs": 12,
       "sm": 12,

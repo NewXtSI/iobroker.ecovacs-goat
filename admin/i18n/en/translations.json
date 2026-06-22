@@ -1,7 +1,18 @@
 {
   "username_label": "ECOVACS Username",
   "password_label": "ECOVACS Password",
-  "loglevel_label": "Log Level",
-  "device_discovery_label": "Enable Device Discovery",
-  "device_discovery_interval_label": "Device Discovery Interval (seconds)"
+  "debug_auth_label": "Debug Authentication",
+  "debug_topics_label": "Debug Topics/Commands",
+  "debug_raw_traffic_label": "Debug Raw MQTT Traffic",
+  "devices_title": "Connected Devices",
+  "device_name": "Device Name",
+  "device_id": "Device ID",
+  "device_model": "Model",
+  "device_status": "Status",
+  "device_active": "Active",
+  "device_battery": "Battery",
+  "load_devices": "Load Devices",
+  "loading": "Loading...",
+  "no_devices": "No devices found",
+  "refresh": "Refresh"
 }

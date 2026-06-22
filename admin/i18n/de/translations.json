@@ -1,7 +1,18 @@
 {
   "username_label": "ECOVACS-Benutzername",
   "password_label": "ECOVACS-Passwort",
-  "loglevel_label": "Protokollierungsstufe",
-  "device_discovery_label": "Automatische Geräteerkennung aktivieren",
-  "device_discovery_interval_label": "Intervall der Geräteerkennung (Sekunden)"
+  "debug_auth_label": "Debug Authentifizierung",
+  "debug_topics_label": "Debug Themen/Befehle",
+  "debug_raw_traffic_label": "Debug Roher MQTT-Verkehr",
+  "devices_title": "Verbundene Geräte",
+  "device_name": "Gerätename",
+  "device_id": "Geräte-ID",
+  "device_model": "Modell",
+  "device_status": "Status",
+  "device_active": "Aktiv",
+  "device_battery": "Batterie",
+  "load_devices": "Geräte laden",
+  "loading": "Wird geladen...",
+  "no_devices": "Keine Geräte gefunden",
+  "refresh": "Aktualisieren"
 }

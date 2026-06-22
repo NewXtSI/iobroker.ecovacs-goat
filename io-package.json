@@ -70,7 +70,7 @@
     "connectionType": "local",
     "dataSource": "push",
     "adminUI": {
-      "config": "json"
+      "config": "html"
     },
     "dependencies": [
       {
@@ -86,9 +86,10 @@
   "native": {
     "username": "",
     "password": "",
-    "loglevel": "info",
-    "deviceDiscoveryEnabled": true,
-    "deviceDiscoveryInterval": 60
+    "debugAuth": false,
+    "debugTopics": false,
+    "debugRawTraffic": false,
+    "devices": {}
   },
   "objects": [],
   "instanceObjects": [

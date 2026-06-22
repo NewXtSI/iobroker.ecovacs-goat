@@ -30,6 +30,11 @@ class EcovacsGoat extends utils.Adapter {
 		// Initialize adapter state
 		this.isConnected = false;
 		this.devices = {};
+		this.debugFlags = {
+			auth: false,
+			topics: false,
+			rawTraffic: false,
+		};
 	}
 
 	/**
@@ -38,6 +43,21 @@ class EcovacsGoat extends utils.Adapter {
 	async onReady() {
 		try {
 			this.log.info('ecovacs-goat adapter starting...');
+
+			// Set debug flags from config
+			this.debugFlags.auth = this.config.debugAuth || false;
+			this.debugFlags.topics = this.config.debugTopics || false;
+			this.debugFlags.rawTraffic = this.config.debugRawTraffic || false;
+
+			if (this.debugFlags.auth) {
+				this.log.debug('[DEBUG] Authentication debugging enabled');
+			}
+			if (this.debugFlags.topics) {
+				this.log.debug('[DEBUG] Topics/Commands debugging enabled');
+			}
+			if (this.debugFlags.rawTraffic) {
+				this.log.debug('[DEBUG] Raw MQTT traffic debugging enabled');
+			}
 
 			// Validate configuration
 			if (!this.config.username || !this.config.password) {
@@ -95,10 +115,8 @@ class EcovacsGoat extends utils.Adapter {
 			// Initialize connection to external MQTT library
 			await this.initializeConnection();
 
-			// Start device discovery if enabled
-			if (this.config.deviceDiscoveryEnabled) {
-				this.startDeviceDiscovery();
-			}
+			// Device discovery happens automatically via external library on startup
+			await this.performDeviceDiscovery();
 
 			this.log.info('ecovacs-goat adapter ready');
 		} catch (error) {
@@ -116,7 +134,14 @@ class EcovacsGoat extends utils.Adapter {
 			// this.mqttClient = await EcovacsGoatLib.connect({
 			//     username: this.config.username,
 			//     password: this.config.password,
+			//     debugAuth: this.debugFlags.auth,
+			//     debugTopics: this.debugFlags.topics,
+			//     debugRawTraffic: this.debugFlags.rawTraffic
 			// });
+
+			if (this.debugFlags.auth) {
+				this.log.debug('[DEBUG-AUTH] Connection attempt (external lib placeholder)');
+			}
 
 			// For now, just set connection status to false
 			await this.setState('info.connection', false, true);
@@ -129,23 +154,79 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
-	 * Start automatic device discovery
+	 * Perform device discovery (automatically via external library on startup)
 	 */
-	startDeviceDiscovery() {
-		const interval = (this.config.deviceDiscoveryInterval || 60) * 1000;
+	async performDeviceDiscovery() {
+		try {
+			this.log.debug('Performing device discovery...');
 
-		this.deviceDiscoveryInterval = setInterval(async () => {
-			try {
-				this.log.debug('Starting device discovery...');
-				// TODO: Implement device discovery using external library
-				// const discoveredDevices = await this.mqttClient.discoverDevices();
-				// this.processDiscoveredDevices(discoveredDevices);
+			// TODO: Get devices from external library
+			// const discoveredDevices = await this.mqttClient.discoverDevices();
+			// this.processDiscoveredDevices(discoveredDevices);
 
-				this.log.debug('Device discovery completed');
-			} catch (error) {
-				this.log.error(`Device discovery failed: ${error.message}`);
+			// For now, this is a placeholder for mock devices
+			if (this.debugFlags.topics) {
+				this.log.debug('[DEBUG-TOPICS] Device discovery request sent');
 			}
-		}, interval);
+
+			this.log.debug('Device discovery completed');
+		} catch (error) {
+			this.log.error(`Device discovery failed: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Process discovered devices
+	 */
+	async processDiscoveredDevices(devices) {
+		try {
+			for (const device of devices) {
+				// Create device channel if not exists
+				const deviceId = device.id || device.deviceId;
+				const channelId = `devices.${deviceId}`;
+
+				await this.setObjectNotExistsAsync(channelId, {
+					type: 'channel',
+					common: {
+						name: device.name || `Device ${deviceId}`,
+						desc: `ECOVACS Device: ${device.model || 'Unknown'}`,
+					},
+					native: device,
+				});
+
+				// Create states for device
+				await this.setObjectNotExistsAsync(`${channelId}.status`, {
+					type: 'state',
+					common: {
+						name: 'Device Status',
+						type: 'string',
+						role: 'info.status',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+
+				await this.setObjectNotExistsAsync(`${channelId}.battery`, {
+					type: 'state',
+					common: {
+						name: 'Battery Level',
+						type: 'number',
+						role: 'value.battery',
+						read: true,
+						write: false,
+						unit: '%',
+						min: 0,
+						max: 100,
+					},
+					native: {},
+				});
+			}
+
+			this.log.debug(`Discovered ${devices.length} device(s)`);
+		} catch (error) {
+			this.log.error(`Error processing discovered devices: ${error.message}`);
+		}
 	}
 
 	/**
@@ -161,8 +242,10 @@ class EcovacsGoat extends utils.Adapter {
 			// Handle incoming commands from ioBroker
 			if (!state.ack) {
 				// This is a command from ioBroker, not an ACK from device
+				if (this.debugFlags.topics) {
+					this.log.debug(`[DEBUG-TOPICS] Command received for ${id}: ${state.val}`);
+				}
 				// TODO: Send command to device via external library
-				this.log.debug(`Command received for ${id}: ${state.val}`);
 			}
 		} else {
 			// The state was deleted
@@ -186,15 +269,47 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Some message was sent to this instance over message box.
+	 * Used by admin interface to request device list.
+	 * @param {ioBroker.Message} obj - the message sent to this instance
+	 */
+	async onMessage(obj) {
+		if (obj.command === 'getDevices') {
+			// Return mock devices or real devices from library
+			const devices = await this.getDeviceList();
+			if (obj.callback) {
+				this.sendTo(obj.from, obj.command, devices, obj.callback);
+			}
+		}
+	}
+
+	/**
+	 * Get device list (mock for now)
+	 */
+	async getDeviceList() {
+		try {
+			// TODO: Replace with actual external library call
+			// return await this.mqttClient.getDeviceList();
+
+			// Mock devices for demonstration
+			const mockDevices = [
+				{ id: 'device_001', name: 'Living Room Vacuum', model: 'GOAT-X1', status: 'connected', battery: 85 },
+				{ id: 'device_002', name: 'Bedroom Vacuum', model: 'GOAT-X2', status: 'offline', battery: 20 },
+				{ id: 'device_003', name: 'Kitchen Robot', model: 'GOAT-PRO', status: 'connected', battery: 100 }
+			];
+
+			return mockDevices;
+		} catch (error) {
+			this.log.error(`Failed to get device list: ${error.message}`);
+			return [];
+		}
+	}
+
+	/**
 	 * Is called when the adapter shuts down - at least one "stop" message was received.
 	 */
 	async onUnload() {
 		try {
-			// Clear device discovery interval
-			if (this.deviceDiscoveryInterval) {
-				clearInterval(this.deviceDiscoveryInterval);
-			}
-
 			// TODO: Disconnect from external library
 			// if (this.mqttClient) {
 			//     await this.mqttClient.disconnect();
@@ -207,16 +322,6 @@ class EcovacsGoat extends utils.Adapter {
 		} catch (error) {
 			this.log.error(`Error during unload: ${error.message}`);
 		}
-	}
-
-	/**
-	 * Some message was sent to this instance over message box.
-	 * Used by email, pushover, text2speech, simpleApi, etc. adapter.
-	 * @param {ioBroker.Message} obj - the message sent to this instance
-	 */
-	async onMessage(obj) {
-		this.log.debug(`Message received: ${JSON.stringify(obj)}`);
-		// Handle adapter messages if needed
 	}
 }
 
