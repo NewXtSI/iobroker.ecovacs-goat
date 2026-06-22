@@ -306,17 +306,7 @@
 			<div id="noDevices" class="no-devices">No devices found. Click "Load Devices" to discover.</div>
 		</div>
 
-		<!-- Action Buttons (will be auto-added by ioBroker, but we add as fallback) -->
-		<div id="action-buttons" class="btn-group" style="margin-top: 30px; justify-content: flex-end;">
-			<button id="saveButton" class="btn">
-				<span class="material-icons" style="font-size: 18px;">save</span>
-				Save
-			</button>
-			<button id="closeButton" class="btn btn-secondary">
-				<span class="material-icons" style="font-size: 18px;">close</span>
-				Close
-			</button>
-		</div>
+
 	</div>
 
 	<script src="../../lib/js/materialize.js"></script>
@@ -446,24 +436,6 @@
 		// Button event listeners
 		document.getElementById('loadDevicesBtn').addEventListener('click', loadDevices);
 		document.getElementById('refreshDevicesBtn').addEventListener('click', loadDevices);
-
-		// Save/Close buttons
-		document.getElementById('saveButton').addEventListener('click', function() {
-			const settings = save();
-			// Send save command to ioBroker
-			if (typeof onChange === 'function') {
-				onChange(true); // Mark as changed to trigger save
-			}
-		});
-
-		document.getElementById('closeButton').addEventListener('click', function() {
-			// Close the admin dialog
-			if (typeof window.parent !== 'undefined' && window.parent !== window) {
-				window.parent.postMessage({action: 'closeAdmin'}, '*');
-			} else {
-				window.history.back();
-			}
-		});
 
 		// Form field change listeners
 		document.getElementById('username').addEventListener('change', () => onChange(false));
