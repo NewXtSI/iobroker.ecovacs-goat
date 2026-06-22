@@ -195,31 +195,60 @@ class EcovacsGoat extends utils.Adapter {
 			this.log.info(`Processing ${devices.length} discovered device(s)...`);
 			
 			for (const device of devices) {
-				// Extract device properties (adapt to actual library structure)
 				const deviceId = device.id || device.deviceId || device.did || device.device_id;
-				const deviceName = device.name || device.deviceName || `Device ${deviceId}`;
-				const deviceModel = device.model || device.modelName || device.deviceModel || 'Unknown';
-
 				if (!deviceId) {
 					this.log.warn(`Skipping device without ID: ${JSON.stringify(device)}`);
 					continue;
 				}
 
-				this.log.info(`Creating device channel: ${deviceId} (${deviceName}) - Model: ${deviceModel}`);
+				// Use serial number as channel name (stable, unique), fall back to id
+				const serial = device.serial || deviceId;
+				const channelKey = serial.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-				const channelId = `devices.${deviceId}`;
+				// Human-readable display name: user nick or deviceName or serial
+				const displayName = device.nick || device.deviceName || serial;
+				const deviceModel = device.model || 'Unknown';
+				const deviceModelLabel = device.deviceName || deviceModel;
+
+				this.log.info(`Creating device channel: ${channelKey} (${displayName}) - Model: ${deviceModelLabel}`);
+
+				const channelId = `devices.${channelKey}`;
 
 				// Create device channel
 				await this.setObjectNotExistsAsync(channelId, {
 					type: 'channel',
 					common: {
-						name: deviceName,
-						desc: `ECOVACS Device: ${deviceModel}`,
+						name: displayName,
+						desc: `ECOVACS Device: ${deviceModelLabel}`,
 					},
 					native: device,
 				});
 
 				// Create states for device
+				await this.setObjectNotExistsAsync(`${channelId}.name`, {
+					type: 'state',
+					common: {
+						name: 'Device Name',
+						type: 'string',
+						role: 'info.name',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+
+				await this.setObjectNotExistsAsync(`${channelId}.model`, {
+					type: 'state',
+					common: {
+						name: 'Device Model',
+						type: 'string',
+						role: 'info.hardware',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+
 				await this.setObjectNotExistsAsync(`${channelId}.status`, {
 					type: 'state',
 					common: {
@@ -247,11 +276,13 @@ class EcovacsGoat extends utils.Adapter {
 					native: {},
 				});
 
-				// Set initial state
+				// Set initial states
+				await this.setState(`${channelId}.name`, displayName, true);
+				await this.setState(`${channelId}.model`, deviceModelLabel, true);
 				await this.setState(`${channelId}.status`, 'connected', true);
-				await this.setState(`${channelId}.battery`, 0, true);
+				await this.setState(`${channelId}.battery`, device.battery ?? 0, true);
 
-				this.devices[deviceId] = device;
+				this.devices[channelKey] = device;
 			}
 
 			this.log.info(`Discovered and configured ${devices.length} device(s)`);
