@@ -1,0 +1,7 @@
+{
+  "username_label": "ECOVACS-Benutzername",
+  "password_label": "ECOVACS-Passwort",
+  "loglevel_label": "Protokollierungsstufe",
+  "device_discovery_label": "Automatische Geräteerkennung aktivieren",
+  "device_discovery_interval_label": "Intervall der Geräteerkennung (Sekunden)"
+}

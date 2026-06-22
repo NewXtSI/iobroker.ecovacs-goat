@@ -1,0 +1,45 @@
+{
+	"cli": true,
+	"target": "directory",
+	"adapterName": "ecovacs-goat",
+	"title": "ECOVACS GOAT Series",
+	"description": "MQTT adapter for ECOVACS GOAT series devices",
+	"keywords": [
+		"ecovacs",
+		"vacuum",
+		"goat",
+		"mqtt",
+		"robot cleaner"
+	],
+	"expert": "no",
+	"features": [
+		"adapter"
+	],
+	"adminFeatures": [],
+	"type": "alarm",
+	"startMode": "daemon",
+	"connectionType": "cloud",
+	"dataSource": "poll",
+	"connectionIndicator": "no",
+	"language": "JavaScript",
+	"nodeVersion": "20",
+	"adminUi": "json",
+	"tools": [
+		"ESLint",
+		"type checking"
+	],
+	"eslintConfig": "official",
+	"releaseScript": "yes",
+	"devServer": "local",
+	"indentation": "Tab",
+	"quotes": "single",
+	"authorName": "ioBroker Developer",
+	"authorGithub": "ioBrokerAdapter",
+	"authorEmail": "dev@iobroker.net",
+	"gitRemoteProtocol": "HTTPS",
+	"gitCommit": "no",
+	"defaultBranch": "main",
+	"license": "MIT License",
+	"dependabot": "yes",
+	"creatorVersion": "3.1.5"
+}

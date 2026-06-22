@@ -1,0 +1,82 @@
+{
+  "i18n": true,
+  "type": "panel",
+  "items": {
+    "username": {
+      "type": "text",
+      "label": "username_label",
+      "placeholder": "Enter ECOVACS username",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    },
+    "password": {
+      "type": "password",
+      "label": "password_label",
+      "placeholder": "Enter ECOVACS password",
+      "newLine": false,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    },
+    "loglevel": {
+      "type": "select",
+      "label": "loglevel_label",
+      "options": [
+        {
+          "label": "debug",
+          "value": "debug"
+        },
+        {
+          "label": "info",
+          "value": "info"
+        },
+        {
+          "label": "warn",
+          "value": "warn"
+        },
+        {
+          "label": "error",
+          "value": "error"
+        }
+      ],
+      "default": "info",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    },
+    "deviceDiscoveryEnabled": {
+      "type": "checkbox",
+      "label": "device_discovery_label",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    },
+    "deviceDiscoveryInterval": {
+      "type": "number",
+      "label": "device_discovery_interval_label",
+      "placeholder": "Interval in seconds",
+      "min": 10,
+      "max": 3600,
+      "step": 10,
+      "unit": "s",
+      "newLine": false,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    }
+  }
+}

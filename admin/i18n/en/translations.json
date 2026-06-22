@@ -1,0 +1,7 @@
+{
+  "username_label": "ECOVACS Username",
+  "password_label": "ECOVACS Password",
+  "loglevel_label": "Log Level",
+  "device_discovery_label": "Enable Device Discovery",
+  "device_discovery_interval_label": "Device Discovery Interval (seconds)"
+}

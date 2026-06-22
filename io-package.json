@@ -1,0 +1,140 @@
+{
+  "common": {
+    "name": "ecovacs-goat",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
+    },
+    "titleLang": {
+      "en": "ECOVACS GOAT Series",
+      "de": "ECOVACS GOAT-Serie",
+      "ru": "Серия ECOVACS GOAT",
+      "pt": "Série ECOVACS GOAT",
+      "nl": "ECOVACS GOAT-serie",
+      "fr": "Série ECOVACS CHÈVRE",
+      "it": "Serie ECOVACS GOAT",
+      "es": "Serie CABRA ECOVACS",
+      "pl": "Seria ECOVACS GOAT",
+      "uk": "Серія ECOVACS GOAT",
+      "zh-cn": "科沃斯山羊系列"
+    },
+    "desc": {
+      "en": "MQTT adapter for ECOVACS GOAT series devices",
+      "de": "MQTT-Adapter für Geräte der ECOVACS GOAT-Serie",
+      "ru": "Адаптер MQTT для устройств серии ECOVACS GOAT",
+      "pt": "Adaptador MQTT para dispositivos da série ECOVACS GOAT",
+      "nl": "MQTT-adapter voor apparaten uit de ECOVACS GOAT-serie",
+      "fr": "Adaptateur MQTT pour les appareils de la série ECOVACS GOAT",
+      "it": "Adattatore MQTT per dispositivi serie ECOVACS GOAT",
+      "es": "Adaptador MQTT para dispositivos de la serie ECOVACS GOAT",
+      "pl": "Adapter MQTT do urządzeń serii ECOVACS GOAT",
+      "uk": "Адаптер MQTT для пристроїв серії ECOVACS GOAT",
+      "zh-cn": "适用于 ECOVACS GOAT 系列设备的 MQTT 适配器"
+    },
+    "authors": [
+      "ioBroker Developer <dev@iobroker.net>"
+    ],
+    "keywords": [
+      "ecovacs",
+      "vacuum",
+      "goat",
+      "mqtt",
+      "robot cleaner"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "ecovacs-goat.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/ioBrokerAdapter/ioBroker.ecovacs-goat/main/admin/ecovacs-goat.png",
+    "readme": "https://github.com/ioBrokerAdapter/ioBroker.ecovacs-goat/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "general",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.0.23"
+      }
+    ]
+  },
+  "native": {
+    "username": "",
+    "password": "",
+    "loglevel": "info",
+    "deviceDiscoveryEnabled": true,
+    "deviceDiscoveryInterval": 60
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Device Information",
+        "desc": "Adapter status and connection information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "name": "Connection Status",
+        "type": "boolean",
+        "role": "indicator.connected",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastUpdate",
+      "type": "state",
+      "common": {
+        "name": "Last Update",
+        "type": "number",
+        "role": "value.time",
+        "read": true,
+        "write": false,
+        "unit": "ms"
+      },
+      "native": {}
+    },
+    {
+      "_id": "devices",
+      "type": "channel",
+      "common": {
+        "name": "ECOVACS Devices",
+        "desc": "Container for connected ECOVACS GOAT devices"
+      },
+      "native": {}
+    }
+  ]
+}
