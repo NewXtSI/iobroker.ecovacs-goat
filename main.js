@@ -165,9 +165,13 @@ class EcovacsGoat extends utils.Adapter {
 
 			this.log.debug('Performing device discovery...');
 
-			const discoveredDevices = await this.ecovacsClient.discoverDevices();
+			const discoveryResult = await this.ecovacsClient.discoverDevices();
+			const discoveredDevices = Array.isArray(discoveryResult) ? discoveryResult : [];
 
 			this.log.info(`Device discovery returned ${discoveredDevices.length} device(s)`);
+			if (!Array.isArray(discoveryResult)) {
+				this.log.warn(`Device discovery returned non-array result type: ${typeof discoveryResult}`);
+			}
 			
 			if (discoveredDevices.length > 0) {
 				this.log.debug(`Discovered devices: ${JSON.stringify(discoveredDevices).substring(0, 500)}`);
