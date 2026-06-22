@@ -13,42 +13,84 @@
 
 ## ECOVACS GOAT Adapter for ioBroker
 
-MQTT adapter for ECOVACS GOAT series devices with automatic device discovery.
+MQTT adapter for ECOVACS GOAT series devices with automatic device discovery via the `node-ecovacs.js` library.
 
 ### Features
 
-- **MQTT Communication**: Connect to ECOVACS GOAT devices using the new MQTT protocol
-- **Device Discovery**: Automatically discover connected ECOVACS devices
-- **Authentication**: Secure connection using username and password
-- **Flexible Logging**: Configurable logging levels (debug, info, warn, error)
-- **Modern Admin UI**: JSON-based configuration interface
+- **MQTT Communication**: Connect to ECOVACS GOAT devices using the MQTT protocol (via node-ecovacs.js)
+- **Automatic Device Discovery**: Automatically discover connected ECOVACS devices on adapter startup
+- **Debug Options**: Enable debugging for authentication, topics, or raw MQTT traffic
+- **Device Status Monitoring**: Track battery level and device status
+- **Modern Admin UI**: HTML-based configuration interface with device management
 
 ## Installation
 
-1. Install the adapter via ioBroker Admin Panel
-2. Configure your ECOVACS credentials in the adapter settings
-3. Enable automatic device discovery if desired
-4. Restart the adapter
+1. Install the adapter via ioBroker Admin Panel or npm:
+   ```bash
+   npm install iobroker.ecovacs-goat
+   ```
+
+2. Configure your ECOVACS credentials in the adapter settings:
+   - Username: Your ECOVACS account username
+   - Password: Your ECOVACS account password
+
+3. Optionally enable debug flags for troubleshooting:
+   - **Debug Authentication**: Log authentication process details
+   - **Debug Topics/Commands**: Log MQTT topics and commands
+   - **Debug Raw Traffic**: Log raw MQTT messages
+
+4. Save configuration and restart the adapter
+
+5. Use the **Load Devices** button in Admin UI to discover and enable devices
 
 ## Configuration
 
 ### Admin Settings
 
-- **Username**: Your ECOVACS account username
-- **Password**: Your ECOVACS account password  
-- **Log Level**: Adapter logging level (default: info)
-- **Enable Device Discovery**: Automatically scan for connected devices
-- **Discovery Interval**: Scan interval in seconds (default: 60)
+- **ECOVACS Username**: Your ECOVACS account username
+- **ECOVACS Password**: Your ECOVACS account password  
+- **Debug Authentication**: Enable authentication debugging (logs in adapter)
+- **Debug Topics/Commands**: Enable topic/command debugging
+- **Debug Raw MQTT Traffic**: Enable raw traffic debugging
 
-## External Library
+### Device Management
 
-This adapter requires an external MQTT library for device communication. The library will be specified once it's available and can be installed via:
+After saving configuration and restarting, click **Load Devices** to:
+1. Connect to ECOVACS service
+2. Discover available devices
+3. Show device list with checkboxes
+4. Select which devices to activate in ioBroker
 
-```bash
-npm install ecovacs-goat-lib  # Placeholder - actual package name will be provided
-```
+Selected devices will be created as ioBroker states under `devices.<device_id>` with:
+- `status`: Current device status
+- `battery`: Battery level percentage
 
-> **Note**: The adapter currently includes placeholder code for external library integration. Once the MQTT library is available, update `main.js` to include the actual library imports and device communication code.
+## Technical Details
+
+### External Library
+
+This adapter uses **[node-ecovacs.js](https://github.com/NewXtSI/node-ecovacs.js)** for ECOVACS device communication.
+
+- **Repository**: https://github.com/NewXtSI/node-ecovacs.js
+- **Status**: Active development
+- **Note**: API may change - adapter is designed to be flexible for future updates
+
+### Device Discovery
+
+Device discovery occurs automatically on adapter startup. The adapter:
+1. Connects to the ECOVACS service using provided credentials
+2. Requests device list from service
+3. Creates ioBroker states for each device
+4. Shows device list in Admin UI for selection
+
+### Debug Output
+
+When debug flags are enabled, the adapter logs:
+- **`[DEBUG-AUTH]`**: Authentication attempts and credentials handling
+- **`[DEBUG-TOPICS]`**: MQTT topic subscriptions and command sending
+- **`[DEBUG-MQTT]`**: Raw MQTT message payloads
+
+View logs in ioBroker's **Admin > Logs** panel.
 
 ## Development
 
@@ -56,28 +98,54 @@ npm install ecovacs-goat-lib  # Placeholder - actual package name will be provid
 
 ```bash
 npm install
-npm run build      # Not needed for JavaScript, but good for validation
-npm run test       # Run all tests
-npm run test:package  # Validate package.json and io-package.json
-npm run lint       # Check code style
+npm run test:package  # Validate configuration
+npm run lint          # Check code style
 ```
 
-### Scripts
+### Adapter Library Integration
 
-| Script | Description |
-|--------|-------------|
-| `test:package` | Validates package.json and io-package.json |
-| `test:js` | Runs JavaScript tests |
-| `test` | Runs all tests |
-| `lint` | Checks code style with ESLint |
-| `translate` | Auto-translate strings to all supported languages |
-| `release` | Create new release (see release-script) |
+The adapter includes `lib/ecovacs-client.js` as an abstraction layer for the external library:
+
+- **Flexibility**: Easily adapt to API changes in `node-ecovacs.js`
+- **Error Handling**: Graceful fallback if external library is unavailable
+- **Method Detection**: Automatically tries common method names to support different versions
+
+### File Structure
+
+```
+├── admin/
+│   ├── index_m.html       # Configuration interface
+│   ├── jsonConfig.json    # JSON config (alternative)
+│   ├── i18n/              # Translations (EN, DE, etc.)
+│   └── ecovacs-goat.png   # Adapter icon
+├── lib/
+│   ├── ecovacs-client.js  # External library wrapper
+│   └── adapter-config.d.ts
+├── main.js                # Adapter implementation
+├── io-package.json        # Adapter metadata
+└── package.json           # Dependencies (includes node-ecovacs.js)
+```
 
 ## Troubleshooting
 
-- **Connection Failed**: Check username/password configuration
-- **No Devices Found**: Ensure devices are powered on and connected to network
-- **Adapter Won't Start**: Check logs for missing dependencies or configuration errors
+### Connection Failed
+- Check username and password
+- Verify ECOVACS account is valid
+- Enable `Debug Authentication` to see connection details
+
+### No Devices Found
+- Ensure at least one ECOVACS device is registered on account
+- Check network connectivity
+- Restart adapter
+
+### Library Not Found
+- Run: `npm install` in adapter directory
+- The `node-ecovacs.js` library is installed as dependency
+
+### Adapter Won't Start
+- Check logs in **Admin > Logs**
+- Verify `package.json` dependencies are installed
+- Ensure ioBroker version compatibility (requires js-controller >=6.0.11)
 
 ## License
 
@@ -88,9 +156,11 @@ MIT License - see LICENSE file
 ### 0.0.1
 
 - Initial release
-- Basic adapter framework with Admin UI
-- Placeholder for external MQTT library integration
-- Device discovery ready for implementation
+- Integration with node-ecovacs.js library
+- Device discovery and management via Admin UI
+- Debug flags for authentication, topics, and raw traffic
+- Support for device status and battery monitoring
+- Admin interface with device selection checkboxes
 
 ---
 
@@ -98,52 +168,54 @@ MIT License - see LICENSE file
 
 ### ECOVACS GOAT Adapter für ioBroker
 
-MQTT-Adapter für ECOVACS GOAT-Serie Geräte mit automatischer Geräteerkennung.
+MQTT-Adapter für ECOVACS GOAT-Serie Geräte mit automatischer Geräteerkennung über die `node-ecovacs.js` Bibliothek.
 
 ### Features
 
-- **MQTT Kommunikation**: Verbindung zu ECOVACS GOAT Geräten über das neue MQTT-Protokoll
-- **Automatische Geräteerkennung**: Entdecke verbundene ECOVACS Geräte automatisch
-- **Authentifizierung**: Sichere Verbindung mit Benutzername und Passwort
-- **Flexible Protokollierung**: Konfigurierbare Protokollstufen (debug, info, warn, error)
-- **Modernes Admin Interface**: JSON-basierte Konfigurationsseite
+- **MQTT-Kommunikation**: Verbindung zu ECOVACS GOAT Geräten über MQTT (via node-ecovacs.js)
+- **Automatische Geräteerkennung**: Entdecke verbundene ECOVACS Geräte automatisch beim Starten
+- **Debug-Optionen**: Aktiviere Debugging für Authentifizierung, Topics oder Rohen MQTT-Verkehr
+- **Geräte-Statusüberwachung**: Verfolge Batteriestatus und Gerätestatus
+- **Modernes Admin Interface**: HTML-basierte Konfigurationsseite mit Geräteverwaltung
 
 ### Installation
 
-1. Installiere den Adapter über das ioBroker Admin-Panel
-2. Konfiguriere deine ECOVACS-Anmeldedaten in den Adaptereinstellungen
-3. Aktiviere die automatische Geräteerkennung falls gewünscht
-4. Starte den Adapter neu
+1. Installiere den Adapter über ioBroker Admin oder npm:
+   ```bash
+   npm install iobroker.ecovacs-goat
+   ```
+
+2. Konfiguriere deine ECOVACS-Anmeldedaten:
+   - Benutzername: Dein ECOVACS-Kontoname
+   - Passwort: Dein ECOVACS-Kennwort
+
+3. Optional: Aktiviere Debug-Flags zum Debuggen:
+   - **Debug Authentifizierung**: Zeige Authentifizierungsdetails
+   - **Debug Themen/Befehle**: Zeige MQTT-Themen und Befehle
+   - **Debug Roher Verkehr**: Zeige Rohe MQTT-Meldungen
+
+4. Speichere Konfiguration und starte Adapter neu
+
+5. Klicke auf **Geräte laden** im Admin Interface, um Geräte zu erkennen und aktivieren
 
 ### Konfiguration
 
 #### Admin-Einstellungen
 
-- **Benutzername**: Dein ECOVACS-Kontoname
-- **Passwort**: Dein ECOVACS-Kennwort
-- **Protokollstufe**: Adapter-Protokollierungsstufe (Standard: info)
-- **Geräteerkennung aktivieren**: Automatisch nach Geräten suchen
-- **Erkennungsintervall**: Suchintervall in Sekunden (Standard: 60)
+- **ECOVACS-Benutzername**: Dein ECOVACS-Kontoname
+- **ECOVACS-Passwort**: Dein ECOVACS-Kennwort
+- **Debug Authentifizierung**: Authentifizierungs-Debugging aktivieren
+- **Debug Themen/Befehle**: Topic/Befehls-Debugging aktivieren
+- **Debug Roher MQTT-Verkehr**: Rohen Verkehr debuggen
 
-### Externe Bibliothek
+### Geräteverwaltung
 
-Dieser Adapter benötigt eine externe MQTT-Bibliothek für die Gerätekommunikation. Die Bibliothek wird bereitgestellt, sobald sie verfügbar ist:
-
-```bash
-npm install ecovacs-goat-lib  # Platzhalter - tatsächlicher Paketname wird mitgeteilt
-```
-
-> **Hinweis**: Der Adapter enthält derzeit Platzhalter-Code für die externe Bibliothek-Integration. Sobald die MQTT-Bibliothek verfügbar ist, bitte `main.js` mit den tatsächlichen Library-Importen aktualisieren.
+Nach dem Speichern und Neustart: Klicke **Geräte laden**, um:
+1. Mit ECOVACS-Service zu verbinden
+2. Verfügbare Geräte zu erkennen
+3. Geräteliste mit Checkboxes anzuzeigen
+4. Auswählen, welche Geräte in ioBroker aktiviert werden
 
 ### Lizenz
 
 MIT Lizenz - siehe LICENSE Datei
-
-### Changelog
-
-#### 0.0.1
-
-- Erste Veröffentlichung
-- Basis-Adapter-Gerüst mit Admin-Interface
-- Platzhalter für externe MQTT-Bibliothek-Integration
-- Geräteerkennung für spätere Implementierung vorbereitet

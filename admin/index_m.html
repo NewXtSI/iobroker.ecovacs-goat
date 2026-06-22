@@ -42,6 +42,7 @@
             display: flex;
             gap: 20px;
             margin: 15px 0;
+            flex-wrap: wrap;
         }
         .checkbox-item {
             display: flex;
@@ -89,10 +90,14 @@
         .btn:hover {
             background-color: #1976D2;
         }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         .btn-secondary {
             background-color: #757575;
         }
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background-color: #616161;
         }
         .loading {
@@ -109,6 +114,7 @@
             border-radius: 2px;
             font-size: 12px;
             text-align: center;
+            font-weight: bold;
         }
         .status-connected {
             background-color: #c8e6c9;
@@ -121,6 +127,14 @@
         .device-battery {
             font-weight: bold;
             color: #1976D2;
+        }
+        .info-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 2px;
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            color: #1565c0;
         }
     </style>
 </head>
@@ -165,6 +179,10 @@
         <div class="panel">
             <div class="panel-title" data-i18n="devices_title"></div>
             
+            <div class="info-message">
+                <strong>Note:</strong> Save configuration and restart adapter to load devices from ECOVACS service.
+            </div>
+            
             <button id="loadDevicesBtn" class="btn" data-i18n="load_devices"></button>
             <button id="refreshDevicesBtn" class="btn btn-secondary" data-i18n="refresh"></button>
             
@@ -189,13 +207,6 @@
     <script src="../../lib/js/materialize.js"></script>
     <script src="../../js/adapter-settings.js"></script>
     <script>
-        // Mock devices for demonstration
-        const mockDevices = [
-            { id: 'device_001', name: 'Living Room Vacuum', model: 'GOAT-X1', status: 'connected', battery: 85 },
-            { id: 'device_002', name: 'Bedroom Vacuum', model: 'GOAT-X2', status: 'offline', battery: 20 },
-            { id: 'device_003', name: 'Kitchen Robot', model: 'GOAT-PRO', status: 'connected', battery: 100 }
-        ];
-
         let currentSettings = {};
         let currentDevices = {};
 
@@ -239,16 +250,25 @@
             return settings;
         }
 
-        // Load devices (mock)
+        // Load devices from adapter
         function loadDevices() {
-            document.getElementById('loadDevicesBtn').disabled = true;
-            document.getElementById('loadDevicesBtn').textContent = 'Loading...';
+            const btn = document.getElementById('loadDevicesBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
             
-            setTimeout(() => {
-                displayDevices(mockDevices);
-                document.getElementById('loadDevicesBtn').disabled = false;
-                document.getElementById('loadDevicesBtn').textContent = 'Load Devices';
-            }, 500);
+            // Send message to adapter to get devices
+            sendTo(null, 'getDevices', {}, (result) => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                
+                if (result && Array.isArray(result)) {
+                    displayDevices(result);
+                } else {
+                    // Show info message
+                    showMessage('No devices returned. Make sure adapter is running and connected.', 'info');
+                }
+            });
         }
 
         // Display devices in table
@@ -266,17 +286,24 @@
             }
 
             devices.forEach(device => {
-                const isActive = currentDevices[device.id] !== false;
-                const statusClass = device.status === 'connected' ? 'status-connected' : 'status-offline';
+                // Extract device properties (adapt to library structure)
+                const deviceId = device.id || device.deviceId || device.did || device.device_id || 'unknown';
+                const deviceName = device.name || device.deviceName || 'Unknown Device';
+                const deviceModel = device.model || device.modelName || device.deviceModel || 'Unknown Model';
+                const status = device.status || 'unknown';
+                const battery = device.battery || 0;
+
+                const isActive = currentDevices[deviceId] !== false;
+                const statusClass = status === 'connected' || status === 'online' ? 'status-connected' : 'status-offline';
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="device-checkbox" data-device-id="${device.id}" ${isActive ? 'checked' : ''}></td>
-                    <td>${device.name}</td>
-                    <td>${device.id}</td>
-                    <td>${device.model}</td>
-                    <td><span class="device-status ${statusClass}">${device.status}</span></td>
-                    <td><span class="device-battery">${device.battery}%</span></td>
+                    <td><input type="checkbox" class="device-checkbox" data-device-id="${deviceId}" ${isActive ? 'checked' : ''}></td>
+                    <td>${escapeHtml(deviceName)}</td>
+                    <td><code>${escapeHtml(deviceId)}</code></td>
+                    <td>${escapeHtml(deviceModel)}</td>
+                    <td><span class="device-status ${statusClass}">${escapeHtml(status)}</span></td>
+                    <td><span class="device-battery">${battery}%</span></td>
                 `;
                 tbody.appendChild(row);
             });
@@ -292,6 +319,23 @@
 
             table.style.display = 'table';
             noDevices.style.display = 'none';
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show message (helper)
+        function showMessage(msg, type) {
+            const container = document.querySelector('.adapter-settings');
+            const div = document.createElement('div');
+            div.className = 'info-message';
+            div.textContent = msg;
+            container.insertBefore(div, container.firstChild);
+            setTimeout(() => div.remove(), 3000);
         }
 
         // Event listeners

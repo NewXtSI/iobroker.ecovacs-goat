@@ -3,14 +3,11 @@
 /*
  * ECOVACS GOAT Series Adapter
  * Adapter for controlling ECOVACS GOAT series devices via MQTT
- * Requires external MQTT library for device communication
+ * Uses node-ecovacs.js library for device communication
  */
 
 const utils = require('@iobroker/adapter-core');
-
-// Placeholder for external MQTT library
-// This library will be used for device communication
-// let EcovacsGoatLib = null;
+const EcovacsClient = require('./lib/ecovacs-client');
 
 class EcovacsGoat extends utils.Adapter {
 	/**
@@ -30,6 +27,7 @@ class EcovacsGoat extends utils.Adapter {
 		// Initialize adapter state
 		this.isConnected = false;
 		this.devices = {};
+		this.ecovacsClient = null;
 		this.debugFlags = {
 			auth: false,
 			topics: false,
@@ -62,6 +60,7 @@ class EcovacsGoat extends utils.Adapter {
 			// Validate configuration
 			if (!this.config.username || !this.config.password) {
 				this.log.warn('Username or password not configured. Please configure credentials in admin panel.');
+				return;
 			}
 
 			// Create state objects if they don't exist
@@ -112,7 +111,10 @@ class EcovacsGoat extends utils.Adapter {
 			// Subscribe to state changes
 			this.subscribeStates('*');
 
-			// Initialize connection to external MQTT library
+			// Initialize ECOVACS client
+			this.ecovacsClient = new EcovacsClient(this, this.config);
+
+			// Initialize connection to external ECOVACS library
 			await this.initializeConnection();
 
 			// Device discovery happens automatically via external library on startup
@@ -125,31 +127,29 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
-	 * Initialize connection to external MQTT library
+	 * Initialize connection to external ECOVACS library
 	 */
 	async initializeConnection() {
 		try {
-			// TODO: Replace with actual external library import
-			// const EcovacsGoatLib = require('ecovacs-goat-lib'); // Placeholder
-			// this.mqttClient = await EcovacsGoatLib.connect({
-			//     username: this.config.username,
-			//     password: this.config.password,
-			//     debugAuth: this.debugFlags.auth,
-			//     debugTopics: this.debugFlags.topics,
-			//     debugRawTraffic: this.debugFlags.rawTraffic
-			// });
-
-			if (this.debugFlags.auth) {
-				this.log.debug('[DEBUG-AUTH] Connection attempt (external lib placeholder)');
+			if (!this.ecovacsClient) {
+				throw new Error('ECOVACS client not initialized');
 			}
 
-			// For now, just set connection status to false
-			await this.setState('info.connection', false, true);
+			const connected = await this.ecovacsClient.connect();
 
-			this.log.debug('Connection initialization - waiting for external library');
+			if (connected) {
+				await this.setState('info.connection', true, true);
+				this.isConnected = true;
+				this.log.info('Connected to ECOVACS service');
+			} else {
+				await this.setState('info.connection', false, true);
+				this.isConnected = false;
+				this.log.warn('Failed to connect to ECOVACS service');
+			}
 		} catch (error) {
 			this.log.error(`Failed to initialize connection: ${error.message}`);
 			await this.setState('info.connection', false, true);
+			this.isConnected = false;
 		}
 	}
 
@@ -158,15 +158,17 @@ class EcovacsGoat extends utils.Adapter {
 	 */
 	async performDeviceDiscovery() {
 		try {
+			if (!this.isConnected || !this.ecovacsClient) {
+				this.log.debug('Not connected, skipping device discovery');
+				return;
+			}
+
 			this.log.debug('Performing device discovery...');
 
-			// TODO: Get devices from external library
-			// const discoveredDevices = await this.mqttClient.discoverDevices();
-			// this.processDiscoveredDevices(discoveredDevices);
+			const discoveredDevices = await this.ecovacsClient.discoverDevices();
 
-			// For now, this is a placeholder for mock devices
-			if (this.debugFlags.topics) {
-				this.log.debug('[DEBUG-TOPICS] Device discovery request sent');
+			if (discoveredDevices.length > 0) {
+				await this.processDiscoveredDevices(discoveredDevices);
 			}
 
 			this.log.debug('Device discovery completed');
@@ -181,15 +183,24 @@ class EcovacsGoat extends utils.Adapter {
 	async processDiscoveredDevices(devices) {
 		try {
 			for (const device of devices) {
-				// Create device channel if not exists
-				const deviceId = device.id || device.deviceId;
+				// Extract device properties (adapt to actual library structure)
+				const deviceId = device.id || device.deviceId || device.did || device.device_id;
+				const deviceName = device.name || device.deviceName || `Device ${deviceId}`;
+				const deviceModel = device.model || device.modelName || device.deviceModel || 'Unknown';
+
+				if (!deviceId) {
+					this.log.warn(`Skipping device without ID: ${JSON.stringify(device)}`);
+					continue;
+				}
+
 				const channelId = `devices.${deviceId}`;
 
+				// Create device channel
 				await this.setObjectNotExistsAsync(channelId, {
 					type: 'channel',
 					common: {
-						name: device.name || `Device ${deviceId}`,
-						desc: `ECOVACS Device: ${device.model || 'Unknown'}`,
+						name: deviceName,
+						desc: `ECOVACS Device: ${deviceModel}`,
 					},
 					native: device,
 				});
@@ -221,9 +232,16 @@ class EcovacsGoat extends utils.Adapter {
 					},
 					native: {},
 				});
+
+				// Set initial state
+				await this.setState(`${channelId}.status`, 'connected', true);
+				await this.setState(`${channelId}.battery`, 0, true);
+
+				this.devices[deviceId] = device;
 			}
 
-			this.log.debug(`Discovered ${devices.length} device(s)`);
+			this.log.info(`Discovered and configured ${devices.length} device(s)`);
+			await this.setState('info.lastUpdate', Date.now(), true);
 		} catch (error) {
 			this.log.error(`Error processing discovered devices: ${error.message}`);
 		}
@@ -245,7 +263,18 @@ class EcovacsGoat extends utils.Adapter {
 				if (this.debugFlags.topics) {
 					this.log.debug(`[DEBUG-TOPICS] Command received for ${id}: ${state.val}`);
 				}
-				// TODO: Send command to device via external library
+
+				// Parse command (e.g., devices.device_001.command = 'start')
+				const parts = id.split('.');
+				if (parts.length >= 3 && parts[0] === 'devices') {
+					const deviceId = parts[1];
+					const command = state.val;
+
+					// Send command to device via ECOVACS client
+					if (this.ecovacsClient && this.isConnected) {
+						await this.ecovacsClient.sendCommand(deviceId, command);
+					}
+				}
 			}
 		} else {
 			// The state was deleted
@@ -275,33 +304,11 @@ class EcovacsGoat extends utils.Adapter {
 	 */
 	async onMessage(obj) {
 		if (obj.command === 'getDevices') {
-			// Return mock devices or real devices from library
-			const devices = await this.getDeviceList();
+			// Return device list from ECOVACS client
+			const devices = this.ecovacsClient ? this.ecovacsClient.getDevices() : [];
 			if (obj.callback) {
 				this.sendTo(obj.from, obj.command, devices, obj.callback);
 			}
-		}
-	}
-
-	/**
-	 * Get device list (mock for now)
-	 */
-	async getDeviceList() {
-		try {
-			// TODO: Replace with actual external library call
-			// return await this.mqttClient.getDeviceList();
-
-			// Mock devices for demonstration
-			const mockDevices = [
-				{ id: 'device_001', name: 'Living Room Vacuum', model: 'GOAT-X1', status: 'connected', battery: 85 },
-				{ id: 'device_002', name: 'Bedroom Vacuum', model: 'GOAT-X2', status: 'offline', battery: 20 },
-				{ id: 'device_003', name: 'Kitchen Robot', model: 'GOAT-PRO', status: 'connected', battery: 100 }
-			];
-
-			return mockDevices;
-		} catch (error) {
-			this.log.error(`Failed to get device list: ${error.message}`);
-			return [];
 		}
 	}
 
@@ -310,13 +317,14 @@ class EcovacsGoat extends utils.Adapter {
 	 */
 	async onUnload() {
 		try {
-			// TODO: Disconnect from external library
-			// if (this.mqttClient) {
-			//     await this.mqttClient.disconnect();
-			// }
+			// Disconnect from ECOVACS service
+			if (this.ecovacsClient) {
+				await this.ecovacsClient.disconnect();
+			}
 
 			// Set connection status to false
 			await this.setState('info.connection', false, true);
+			this.isConnected = false;
 
 			this.log.info('ecovacs-goat adapter unloaded');
 		} catch (error) {
