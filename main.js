@@ -167,13 +167,19 @@ class EcovacsGoat extends utils.Adapter {
 
 			const discoveredDevices = await this.ecovacsClient.discoverDevices();
 
+			this.log.info(`Device discovery returned ${discoveredDevices.length} device(s)`);
+			
 			if (discoveredDevices.length > 0) {
+				this.log.debug(`Discovered devices: ${JSON.stringify(discoveredDevices).substring(0, 500)}`);
 				await this.processDiscoveredDevices(discoveredDevices);
+			} else {
+				this.log.warn('No devices discovered. Check your ECOVACS account and credentials.');
 			}
 
 			this.log.debug('Device discovery completed');
 		} catch (error) {
 			this.log.error(`Device discovery failed: ${error.message}`);
+			this.log.debug(`Discovery error details: ${error.stack}`);
 		}
 	}
 
@@ -182,6 +188,8 @@ class EcovacsGoat extends utils.Adapter {
 	 */
 	async processDiscoveredDevices(devices) {
 		try {
+			this.log.info(`Processing ${devices.length} discovered device(s)...`);
+			
 			for (const device of devices) {
 				// Extract device properties (adapt to actual library structure)
 				const deviceId = device.id || device.deviceId || device.did || device.device_id;
@@ -192,6 +200,8 @@ class EcovacsGoat extends utils.Adapter {
 					this.log.warn(`Skipping device without ID: ${JSON.stringify(device)}`);
 					continue;
 				}
+
+				this.log.info(`Creating device channel: ${deviceId} (${deviceName}) - Model: ${deviceModel}`);
 
 				const channelId = `devices.${deviceId}`;
 
