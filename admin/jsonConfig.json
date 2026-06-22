@@ -1,58 +1,70 @@
 {
   "i18n": true,
-  "type": "panel",
+  "type": "tabs",
   "items": {
-    "username": {
-      "type": "text",
-      "label": "username_label",
-      "placeholder": "Enter ECOVACS username",
-      "newLine": true,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 4
+    "authentication": {
+      "type": "panel",
+      "label": "Authentication",
+      "icon": "auth",
+      "items": {
+        "username": {
+          "type": "text",
+          "label": "username_label",
+          "placeholder": "your-username@example.com",
+          "sm": 12,
+          "newLine": true,
+          "validator": "!!data.username",
+          "validatorErrorText": "Username is required"
+        },
+        "password": {
+          "type": "password",
+          "label": "password_label",
+          "sm": 12,
+          "newLine": true,
+          "validator": "!!data.password",
+          "validatorErrorText": "Password is required"
+        },
+        "_info": {
+          "type": "staticText",
+          "text": "Enter your ECOVACS account credentials to connect to your devices.",
+          "newLine": true,
+          "sm": 12
+        }
+      }
     },
-    "password": {
-      "type": "password",
-      "label": "password_label",
-      "placeholder": "Enter ECOVACS password",
-      "newLine": false,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 4
-    },
-    "debugAuth": {
-      "type": "checkbox",
-      "label": "debug_auth_label",
-      "newLine": true,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 4
-    },
-    "debugTopics": {
-      "type": "checkbox",
-      "label": "debug_topics_label",
-      "newLine": false,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 4
-    },
-    "debugRawTraffic": {
-      "type": "checkbox",
-      "label": "debug_raw_traffic_label",
-      "newLine": false,
-      "xs": 12,
-      "sm": 12,
-      "md": 6,
-      "lg": 4,
-      "xl": 4
+    "debugging": {
+      "type": "panel",
+      "label": "Debug Options",
+      "icon": "info",
+      "items": {
+        "_debugInfo": {
+          "type": "staticText",
+          "text": "Enable debug options to see detailed logs in the adapter logs. Useful for troubleshooting connection issues.",
+          "newLine": true,
+          "sm": 12
+        },
+        "debugAuth": {
+          "type": "checkbox",
+          "label": "debug_auth_label",
+          "sm": 12,
+          "newLine": true,
+          "help": "Log authentication requests and responses"
+        },
+        "debugTopics": {
+          "type": "checkbox",
+          "label": "debug_topics_label",
+          "sm": 12,
+          "newLine": true,
+          "help": "Log MQTT topics and device commands"
+        },
+        "debugRawTraffic": {
+          "type": "checkbox",
+          "label": "debug_raw_traffic_label",
+          "sm": 12,
+          "newLine": true,
+          "help": "Log all raw MQTT messages (verbose)"
+        }
+      }
     }
   }
 }

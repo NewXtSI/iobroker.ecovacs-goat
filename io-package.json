@@ -70,7 +70,7 @@
     "connectionType": "local",
     "dataSource": "push",
     "adminUI": {
-      "config": "html"
+      "config": "json"
     },
     "dependencies": [
       {
