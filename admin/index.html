@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>ECOVACS GOAT Configuration</title>
+	<link rel="stylesheet" href="../../lib/css/materialize.css">
+	<link rel="stylesheet" href="../../css/adapter.css">
+	<style>
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		.panel {
+			margin: 15px 0;
+			padding: 20px;
+			background: #fff;
+			border: 1px solid #e0e0e0;
+			border-radius: 2px;
+			box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+		}
+		.panel-title {
+			font-size: 20px;
+			font-weight: bold;
+			margin-bottom: 15px;
+			color: #333;
+			border-bottom: 2px solid #2196F3;
+			padding-bottom: 10px;
+		}
+		.form-group {
+			margin-bottom: 20px;
+		}
+		.form-group label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: 500;
+			color: #555;
+		}
+		.form-group input[type="text"],
+		.form-group input[type="password"] {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 14px;
+			box-sizing: border-box;
+			transition: border-color 0.3s;
+		}
+		.form-group input[type="text"]:focus,
+		.form-group input[type="password"]:focus {
+			outline: none;
+			border-color: #2196F3;
+			box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+		}
+		.checkbox-group {
+			display: flex;
+			gap: 30px;
+			margin: 20px 0;
+			flex-wrap: wrap;
+		}
+		.checkbox-item {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		.checkbox-item input[type="checkbox"] {
+			cursor: pointer;
+			width: 20px;
+			height: 20px;
+		}
+		.checkbox-item label {
+			cursor: pointer;
+			margin: 0;
+			font-weight: 500;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 15px;
+		}
+		th, td {
+			padding: 14px;
+			text-align: left;
+			border-bottom: 1px solid #ddd;
+		}
+		th {
+			background-color: #f5f5f5;
+			font-weight: bold;
+			color: #333;
+		}
+		tr:hover {
+			background-color: #f9f9f9;
+		}
+		.btn {
+			padding: 10px 20px;
+			background-color: #2196F3;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 500;
+			margin-right: 8px;
+			transition: background-color 0.3s;
+		}
+		.btn:hover:not(:disabled) {
+			background-color: #1976D2;
+		}
+		.btn:disabled {
+			background-color: #ccc;
+			cursor: not-allowed;
+		}
+		.btn-secondary {
+			background-color: #757575;
+		}
+		.btn-secondary:hover:not(:disabled) {
+			background-color: #616161;
+		}
+		.device-status {
+			padding: 6px 12px;
+			border-radius: 4px;
+			font-size: 12px;
+			text-align: center;
+			font-weight: bold;
+		}
+		.status-connected {
+			background-color: #c8e6c9;
+			color: #2e7d32;
+		}
+		.status-offline {
+			background-color: #ffcccc;
+			color: #c62828;
+		}
+		.device-battery {
+			font-weight: bold;
+			color: #1976D2;
+		}
+		.info-box {
+			padding: 12px 16px;
+			margin: 15px 0;
+			border-radius: 4px;
+			background-color: #e3f2fd;
+			border-left: 4px solid #2196F3;
+			color: #1565c0;
+			font-size: 14px;
+		}
+		.no-devices {
+			color: #999;
+			text-align: center;
+			padding: 30px;
+			font-style: italic;
+		}
+		code {
+			background-color: #f5f5f5;
+			padding: 2px 6px;
+			border-radius: 3px;
+			font-family: 'Courier New', monospace;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<!-- Authentication Panel -->
+		<div class="panel">
+			<div class="panel-title">Authentication</div>
+			
+			<div class="form-group">
+				<label for="username">ECOVACS Username</label>
+				<input type="text" id="username" class="form-control" placeholder="your-username@example.com">
+			</div>
+			
+			<div class="form-group">
+				<label for="password">ECOVACS Password</label>
+				<input type="password" id="password" class="form-control" placeholder="••••••••">
+			</div>
+		</div>
+
+		<!-- Debug Settings Panel -->
+		<div class="panel">
+			<div class="panel-title">Debug Options</div>
+			
+			<div class="info-box">
+				Enable debug options to see detailed logs in adapter logs. Useful for troubleshooting connection issues.
+			</div>
+			
+			<div class="checkbox-group">
+				<div class="checkbox-item">
+					<input type="checkbox" id="debugAuth">
+					<label for="debugAuth">Debug Authentication</label>
+				</div>
+				<div class="checkbox-item">
+					<input type="checkbox" id="debugTopics">
+					<label for="debugTopics">Debug Topics/Commands</label>
+				</div>
+				<div class="checkbox-item">
+					<input type="checkbox" id="debugRawTraffic">
+					<label for="debugRawTraffic">Debug Raw MQTT Traffic</label>
+				</div>
+			</div>
+		</div>
+
+		<!-- Devices Panel -->
+		<div class="panel">
+			<div class="panel-title">Connected Devices</div>
+			
+			<div class="info-box">
+				<strong>Note:</strong> Save configuration and restart the adapter, then click "Load Devices" to discover devices from your ECOVACS account.
+			</div>
+			
+			<div>
+				<button id="loadDevicesBtn" class="btn">Load Devices</button>
+				<button id="refreshDevicesBtn" class="btn btn-secondary">Refresh</button>
+			</div>
+			
+			<table id="devicesTable" style="display: none;">
+				<thead>
+					<tr>
+						<th>Active</th>
+						<th>Device Name</th>
+						<th>Device ID</th>
+						<th>Model</th>
+						<th>Status</th>
+						<th>Battery</th>
+					</tr>
+				</thead>
+				<tbody id="devicesList"></tbody>
+			</table>
+			
+			<div id="noDevices" class="no-devices">No devices found. Click "Load Devices" to discover.</div>
+		</div>
+	</div>
+
+	<script src="../../lib/js/materialize.js"></script>
+	<script src="../../js/adapter-settings.js"></script>
+	<script>
+		let currentSettings = {};
+		let currentDevices = {};
+
+		// Load settings from ioBroker
+		function load(settings) {
+			currentSettings = settings;
+			
+			document.getElementById('username').value = settings.username || '';
+			document.getElementById('password').value = settings.password || '';
+			document.getElementById('debugAuth').checked = settings.debugAuth || false;
+			document.getElementById('debugTopics').checked = settings.debugTopics || false;
+			document.getElementById('debugRawTraffic').checked = settings.debugRawTraffic || false;
+			currentDevices = settings.devices || {};
+
+			onChange(false);
+		}
+
+		// Save settings to ioBroker
+		function save() {
+			const settings = {
+				username: document.getElementById('username').value,
+				password: document.getElementById('password').value,
+				debugAuth: document.getElementById('debugAuth').checked,
+				debugTopics: document.getElementById('debugTopics').checked,
+				debugRawTraffic: document.getElementById('debugRawTraffic').checked,
+				devices: currentDevices
+			};
+
+			return settings;
+		}
+
+		// Load devices from adapter
+		function loadDevices() {
+			const btn = document.getElementById('loadDevicesBtn');
+			const originalText = btn.textContent;
+			btn.disabled = true;
+			btn.textContent = 'Loading...';
+			
+			// Send message to adapter to get devices
+			sendTo(null, 'getDevices', {}, (result) => {
+				btn.disabled = false;
+				btn.textContent = originalText;
+				
+				if (result && Array.isArray(result) && result.length > 0) {
+					displayDevices(result);
+				} else {
+					showMessage('No devices returned. Make sure adapter is running and configured properly.', 'info');
+					clearDevices();
+				}
+			});
+		}
+
+		// Display devices in table
+		function displayDevices(devices) {
+			const tbody = document.getElementById('devicesList');
+			const table = document.getElementById('devicesTable');
+			const noDevices = document.getElementById('noDevices');
+
+			tbody.innerHTML = '';
+
+			devices.forEach(device => {
+				// Extract device properties
+				const deviceId = device.id || device.deviceId || device.did || device.device_id || 'unknown';
+				const deviceName = device.name || device.deviceName || 'Unknown Device';
+				const deviceModel = device.model || device.modelName || device.deviceModel || 'Unknown Model';
+				const status = device.status || 'unknown';
+				const battery = device.battery || 0;
+
+				const isActive = currentDevices[deviceId] !== false;
+				const statusClass = status === 'connected' || status === 'online' ? 'status-connected' : 'status-offline';
+				
+				const row = document.createElement('tr');
+				row.innerHTML = `
+					<td><input type="checkbox" class="device-checkbox" data-device-id="${escapeHtml(deviceId)}" ${isActive ? 'checked' : ''}></td>
+					<td>${escapeHtml(deviceName)}</td>
+					<td><code>${escapeHtml(deviceId)}</code></td>
+					<td>${escapeHtml(deviceModel)}</td>
+					<td><span class="device-status ${statusClass}">${escapeHtml(status)}</span></td>
+					<td><span class="device-battery">${battery}%</span></td>
+				`;
+				tbody.appendChild(row);
+
+				// Add checkbox change listener
+				row.querySelector('.device-checkbox').addEventListener('change', function() {
+					const id = this.getAttribute('data-device-id');
+					currentDevices[id] = this.checked;
+					onChange(false);
+				});
+			});
+
+			table.style.display = 'table';
+			noDevices.style.display = 'none';
+		}
+
+		function clearDevices() {
+			const table = document.getElementById('devicesTable');
+			const noDevices = document.getElementById('noDevices');
+			const tbody = document.getElementById('devicesList');
+			
+			tbody.innerHTML = '';
+			table.style.display = 'none';
+			noDevices.style.display = 'block';
+		}
+
+		// Escape HTML to prevent XSS
+		function escapeHtml(text) {
+			const div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		// Show message
+		function showMessage(msg, type) {
+			const container = document.querySelector('.container');
+			const div = document.createElement('div');
+			div.className = 'info-box';
+			div.textContent = msg;
+			container.insertBefore(div, container.firstChild);
+			setTimeout(() => div.remove(), 4000);
+		}
+
+		// Event listeners
+		document.getElementById('loadDevicesBtn').addEventListener('click', loadDevices);
+		document.getElementById('refreshDevicesBtn').addEventListener('click', loadDevices);
+
+		document.getElementById('username').addEventListener('change', () => onChange(false));
+		document.getElementById('password').addEventListener('change', () => onChange(false));
+		document.getElementById('debugAuth').addEventListener('change', () => onChange(false));
+		document.getElementById('debugTopics').addEventListener('change', () => onChange(false));
+		document.getElementById('debugRawTraffic').addEventListener('change', () => onChange(false));
+	</script>
+</body>
+</html>
