@@ -99,14 +99,10 @@ class EcovacsGoat extends utils.Adapter {
 				native: {},
 			});
 
-			await this.setObjectNotExistsAsync('devices', {
-				type: 'channel',
-				common: {
-					name: 'ECOVACS Devices',
-					desc: 'Container for connected ECOVACS GOAT devices',
-				},
-				native: {},
-			});
+			await this.ensureObjectType('devices', 'folder', {
+				name: 'ECOVACS Devices',
+				desc: 'Container for connected ECOVACS GOAT devices',
+			}, {});
 
 			// Subscribe to state changes
 			this.subscribeStates('*');
@@ -124,6 +120,29 @@ class EcovacsGoat extends utils.Adapter {
 		} catch (error) {
 			this.log.error(`Error during onReady: ${error.message}`);
 		}
+	}
+
+	/**
+	 * Ensure an object exists with the desired type.
+	 * If an object exists with a different type, it is replaced.
+	 * @param {string} id object id
+	 * @param {'state'|'channel'|'folder'} type desired object type
+	 * @param {ioBroker.StateCommon | ioBroker.ChannelCommon | ioBroker.FolderCommon} common common section
+	 * @param {object} native native section
+	 */
+	async ensureObjectType(id, type, common, native = {}) {
+		const existing = await this.getObjectAsync(id);
+
+		if (existing && existing.type !== type) {
+			this.log.info(`Migrating object ${id} from type ${existing.type} to ${type}`);
+			await this.delObjectAsync(id, { recursive: true });
+		}
+
+		await this.setObjectNotExistsAsync(id, {
+			type,
+			common,
+			native,
+		});
 	}
 
 	/**
@@ -209,104 +228,140 @@ class EcovacsGoat extends utils.Adapter {
 				const displayName = device.nick || device.deviceName || serial;
 				const deviceModel = device.model || 'Unknown';
 				const deviceModelLabel = device.deviceName || deviceModel;
+				const nickName = device.nick || null;
+				const position = device.position && typeof device.position === 'object' ? device.position : {};
+				const mowInfo = device.mowInfo && typeof device.mowInfo === 'object' ? device.mowInfo : {};
+				const deviceDesc =
+					`ECOVACS Device: ${deviceModelLabel}` +
+					(nickName ? ` | Nickname: ${nickName}` : '') +
+					` | Serial: ${serial}`;
 
 				this.log.info(`Creating device channel: ${channelKey} (${displayName}) - Model: ${deviceModelLabel}`);
 
 				const channelId = `devices.${channelKey}`;
 
-				// Create device channel
-				await this.setObjectNotExistsAsync(channelId, {
-					type: 'channel',
-					common: {
-						name: displayName,
-						desc: `ECOVACS Device: ${deviceModelLabel}`,
-					},
-					native: device,
-				});
+				// Create device folder (no channel-in-channel nesting)
+				await this.ensureObjectType(channelId, 'folder', {
+					name: displayName,
+					desc: deviceDesc,
+				}, device);
 
 				// Create states for device
-				await this.setObjectNotExistsAsync(`${channelId}.name`, {
-					type: 'state',
-					common: {
-						name: 'Device Name',
-						type: 'string',
-						role: 'info.name',
-						read: true,
-						write: false,
-					},
-					native: {},
-				});
+				await this.ensureObjectType(`${channelId}.name`, 'state', {
+					name: 'Device Name',
+					type: 'string',
+					role: 'info.name',
+					read: true,
+					write: false,
+				}, {});
 
-				await this.setObjectNotExistsAsync(`${channelId}.model`, {
-					type: 'state',
-					common: {
-						name: 'Device Model',
-						type: 'string',
-						role: 'info.hardware',
-						read: true,
-						write: false,
-					},
-					native: {},
-				});
+				await this.ensureObjectType(`${channelId}.model`, 'state', {
+					name: 'Device Model',
+					type: 'string',
+					role: 'info.hardware',
+					read: true,
+					write: false,
+				}, {});
 
-				await this.setObjectNotExistsAsync(`${channelId}.status`, {
-					type: 'state',
-					common: {
-						name: 'Device Status',
-						type: 'string',
-						role: 'info.status',
-						read: true,
-						write: false,
-					},
-					native: {},
-				});
+				await this.ensureObjectType(`${channelId}.status`, 'state', {
+					name: 'Device Status',
+					type: 'string',
+					role: 'info.status',
+					read: true,
+					write: false,
+				}, {});
 
-				await this.setObjectNotExistsAsync(`${channelId}.mowInfo`, {
-					type: 'state',
-					common: {
-						name: 'Mow Info',
-						type: 'string',
-						role: 'json',
-						read: true,
-						write: false,
-					},
-					native: {},
-				});
+				await this.ensureObjectType(`${channelId}.battery`, 'state', {
+					name: 'Battery Level',
+					type: 'number',
+					role: 'value.battery',
+					read: true,
+					write: false,
+					unit: '%',
+					min: 0,
+					max: 100,
+				}, {});
 
-				await this.setObjectNotExistsAsync(`${channelId}.position`, {
-					type: 'state',
-					common: {
-						name: 'Position',
-						type: 'string',
-						role: 'json',
-						read: true,
-						write: false,
-					},
-					native: {},
-				});
+				// Position as channel with x/y/a states
+				await this.ensureObjectType(`${channelId}.position`, 'channel', {
+					name: 'Position',
+					desc: 'Current mower position',
+				}, {});
 
-				await this.setObjectNotExistsAsync(`${channelId}.battery`, {
-					type: 'state',
-					common: {
-						name: 'Battery Level',
-						type: 'number',
-						role: 'value.battery',
-						read: true,
-						write: false,
-						unit: '%',
-						min: 0,
-						max: 100,
-					},
-					native: {},
-				});
+				await this.ensureObjectType(`${channelId}.position.x`, 'state', {
+					name: 'X',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.position.y`, 'state', {
+					name: 'Y',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.position.a`, 'state', {
+					name: 'A',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// MowInfo as channel with substates
+				await this.ensureObjectType(`${channelId}.mowInfo`, 'channel', {
+					name: 'Mow Info',
+					desc: 'Current mowing status information',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowInfo.trigger`, 'state', {
+					name: 'Trigger',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowInfo.other`, 'state', {
+					name: 'Other',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowInfo.state`, 'state', {
+					name: 'State',
+					type: 'string',
+					role: 'info.status',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowInfo.type`, 'state', {
+					name: 'Type',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
 
 				// Set initial states
 				await this.setState(`${channelId}.name`, displayName, true);
 				await this.setState(`${channelId}.model`, deviceModelLabel, true);
 				await this.setState(`${channelId}.status`, 'connected', true);
-				await this.setState(`${channelId}.mowInfo`, JSON.stringify(device.state ?? null), true);
-				await this.setState(`${channelId}.position`, JSON.stringify(device.position ?? null), true);
 				await this.setState(`${channelId}.battery`, device.battery ?? 0, true);
+				await this.setState(`${channelId}.position.x`, Number(position.x) || 0, true);
+				await this.setState(`${channelId}.position.y`, Number(position.y) || 0, true);
+				await this.setState(`${channelId}.position.a`, Number(position.a) || 0, true);
+				await this.setState(`${channelId}.mowInfo.trigger`, mowInfo.trigger != null ? String(mowInfo.trigger) : '', true);
+				await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
+				await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
+				await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
 
 				this.devices[channelKey] = device;
 
@@ -336,11 +391,18 @@ class EcovacsGoat extends utils.Adapter {
 			}
 
 			if (update.mowInfo !== undefined) {
-				await this.setState(`${channelId}.mowInfo`, JSON.stringify(update.mowInfo ?? null), true);
+				const mowInfo = update.mowInfo && typeof update.mowInfo === 'object' ? update.mowInfo : {};
+				await this.setState(`${channelId}.mowInfo.trigger`, mowInfo.trigger != null ? String(mowInfo.trigger) : '', true);
+				await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
+				await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
+				await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
 			}
 
 			if (update.position !== undefined) {
-				await this.setState(`${channelId}.position`, JSON.stringify(update.position ?? null), true);
+				const position = update.position && typeof update.position === 'object' ? update.position : {};
+				await this.setState(`${channelId}.position.x`, Number(position.x) || 0, true);
+				await this.setState(`${channelId}.position.y`, Number(position.y) || 0, true);
+				await this.setState(`${channelId}.position.a`, Number(position.a) || 0, true);
 			}
 
 			if (update.status !== undefined && update.status !== null) {
