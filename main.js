@@ -261,6 +261,30 @@ class EcovacsGoat extends utils.Adapter {
 					native: {},
 				});
 
+				await this.setObjectNotExistsAsync(`${channelId}.mowInfo`, {
+					type: 'state',
+					common: {
+						name: 'Mow Info',
+						type: 'string',
+						role: 'json',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+
+				await this.setObjectNotExistsAsync(`${channelId}.position`, {
+					type: 'state',
+					common: {
+						name: 'Position',
+						type: 'string',
+						role: 'json',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+
 				await this.setObjectNotExistsAsync(`${channelId}.battery`, {
 					type: 'state',
 					common: {
@@ -280,15 +304,52 @@ class EcovacsGoat extends utils.Adapter {
 				await this.setState(`${channelId}.name`, displayName, true);
 				await this.setState(`${channelId}.model`, deviceModelLabel, true);
 				await this.setState(`${channelId}.status`, 'connected', true);
+				await this.setState(`${channelId}.mowInfo`, JSON.stringify(device.state ?? null), true);
+				await this.setState(`${channelId}.position`, JSON.stringify(device.position ?? null), true);
 				await this.setState(`${channelId}.battery`, device.battery ?? 0, true);
 
 				this.devices[channelKey] = device;
+
+				if (this.ecovacsClient) {
+					await this.ecovacsClient.setupDeviceCallbacks(device, channelKey, this.handleRealtimeDeviceUpdate.bind(this));
+				}
 			}
 
 			this.log.info(`Discovered and configured ${devices.length} device(s)`);
 			await this.setState('info.lastUpdate', Date.now(), true);
 		} catch (error) {
 			this.log.error(`Error processing discovered devices: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Handle realtime updates from library callbacks
+	 * @param {string} channelKey - Device channel key
+	 * @param {Object} update - Partial update payload
+	 */
+	async handleRealtimeDeviceUpdate(channelKey, update) {
+		try {
+			const channelId = `devices.${channelKey}`;
+
+			if (update.battery !== undefined && update.battery !== null) {
+				await this.setState(`${channelId}.battery`, Number(update.battery) || 0, true);
+			}
+
+			if (update.mowInfo !== undefined) {
+				await this.setState(`${channelId}.mowInfo`, JSON.stringify(update.mowInfo ?? null), true);
+			}
+
+			if (update.position !== undefined) {
+				await this.setState(`${channelId}.position`, JSON.stringify(update.position ?? null), true);
+			}
+
+			if (update.status !== undefined && update.status !== null) {
+				await this.setState(`${channelId}.status`, String(update.status), true);
+			}
+
+			await this.setState('info.lastUpdate', Date.now(), true);
+		} catch (error) {
+			this.log.debug(`Failed to process realtime update for ${channelKey}: ${error.message}`);
 		}
 	}
 
