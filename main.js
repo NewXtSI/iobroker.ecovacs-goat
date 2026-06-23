@@ -231,6 +231,8 @@ class EcovacsGoat extends utils.Adapter {
 				const nickName = device.nick || null;
 				const position = device.position && typeof device.position === 'object' ? device.position : {};
 				const mowInfo = device.mowInfo && typeof device.mowInfo === 'object' ? device.mowInfo : {};
+				const lifeSpan = device.lifeSpan && typeof device.lifeSpan === 'object' ? device.lifeSpan : {};
+				const totalStats = device.totalStats && typeof device.totalStats === 'object' ? device.totalStats : {};
 				const deviceDesc =
 					`ECOVACS Device: ${deviceModelLabel}` +
 					(nickName ? ` | Nickname: ${nickName}` : '') +
@@ -350,6 +352,92 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
+				// LifeSpan as channel with blade/lensBrush substates
+				await this.ensureObjectType(`${channelId}.lifeSpan`, 'channel', {
+					name: 'Life Span',
+					desc: 'Consumables life span information',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lifeSpan.blade`, 'channel', {
+					name: 'Blade',
+					desc: 'Blade remaining life span',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lifeSpan.blade.left`, 'state', {
+					name: 'Blade Left',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lifeSpan.blade.total`, 'state', {
+					name: 'Blade Total',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lifeSpan.lensBrush`, 'channel', {
+					name: 'Lens Brush',
+					desc: 'Lens brush remaining life span',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lifeSpan.lensBrush.left`, 'state', {
+					name: 'Lens Brush Left',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lifeSpan.lensBrush.total`, 'state', {
+					name: 'Lens Brush Total',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// TotalStats as channel with common metrics + raw JSON for forward compatibility
+				await this.ensureObjectType(`${channelId}.totalStats`, 'channel', {
+					name: 'Total Stats',
+					desc: 'Aggregated operation statistics',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.totalStats.area`, 'state', {
+					name: 'Area',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.totalStats.time`, 'state', {
+					name: 'Time',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.totalStats.count`, 'state', {
+					name: 'Count',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.totalStats.raw`, 'state', {
+					name: 'Raw Total Stats',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
 				// Set initial states
 				await this.setState(`${channelId}.name`, displayName, true);
 				await this.setState(`${channelId}.model`, deviceModelLabel, true);
@@ -362,6 +450,14 @@ class EcovacsGoat extends utils.Adapter {
 				await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
 				await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
 				await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
+				await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade?.left) || 0, true);
+				await this.setState(`${channelId}.lifeSpan.blade.total`, Number(lifeSpan.blade?.total) || 0, true);
+				await this.setState(`${channelId}.lifeSpan.lensBrush.left`, Number(lifeSpan.lensBrush?.left) || 0, true);
+				await this.setState(`${channelId}.lifeSpan.lensBrush.total`, Number(lifeSpan.lensBrush?.total) || 0, true);
+				await this.setState(`${channelId}.totalStats.area`, Number(totalStats.area) || 0, true);
+				await this.setState(`${channelId}.totalStats.time`, Number(totalStats.time) || 0, true);
+				await this.setState(`${channelId}.totalStats.count`, Number(totalStats.count) || 0, true);
+				await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
 
 				this.devices[channelKey] = device;
 
@@ -403,6 +499,22 @@ class EcovacsGoat extends utils.Adapter {
 				await this.setState(`${channelId}.position.x`, Number(position.x) || 0, true);
 				await this.setState(`${channelId}.position.y`, Number(position.y) || 0, true);
 				await this.setState(`${channelId}.position.a`, Number(position.a) || 0, true);
+			}
+
+			if (update.lifeSpan !== undefined) {
+				const lifeSpan = update.lifeSpan && typeof update.lifeSpan === 'object' ? update.lifeSpan : {};
+				await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade?.left) || 0, true);
+				await this.setState(`${channelId}.lifeSpan.blade.total`, Number(lifeSpan.blade?.total) || 0, true);
+				await this.setState(`${channelId}.lifeSpan.lensBrush.left`, Number(lifeSpan.lensBrush?.left) || 0, true);
+				await this.setState(`${channelId}.lifeSpan.lensBrush.total`, Number(lifeSpan.lensBrush?.total) || 0, true);
+			}
+
+			if (update.totalStats !== undefined) {
+				const totalStats = update.totalStats && typeof update.totalStats === 'object' ? update.totalStats : {};
+				await this.setState(`${channelId}.totalStats.area`, Number(totalStats.area) || 0, true);
+				await this.setState(`${channelId}.totalStats.time`, Number(totalStats.time) || 0, true);
+				await this.setState(`${channelId}.totalStats.count`, Number(totalStats.count) || 0, true);
+				await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
 			}
 
 			if (update.status !== undefined && update.status !== null) {
