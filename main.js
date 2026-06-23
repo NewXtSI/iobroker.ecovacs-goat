@@ -241,6 +241,9 @@ class EcovacsGoat extends utils.Adapter {
 				const totalStats = device.totalStats && typeof device.totalStats === 'object' ? device.totalStats : {};
 				const chargeState = device.chargeState && typeof device.chargeState === 'object' ? device.chargeState : {};
 				const netInfo = device.netInfo && typeof device.netInfo === 'object' ? device.netInfo : {};
+				const volume = device.volume && typeof device.volume === 'object' ? device.volume : {};
+				const sleep = device.sleep;
+				const errorState = device.error;
 				const deviceDesc =
 					`ECOVACS Device: ${deviceModelLabel}` +
 					(nickName ? ` | Nickname: ${nickName}` : '') +
@@ -356,6 +359,53 @@ class EcovacsGoat extends utils.Adapter {
 					name: 'MAC Address',
 					type: 'string',
 					role: 'info.mac',
+					read: true,
+					write: false,
+				}, {});
+
+				// Volume as channel with volume/fallVolume/searchVolume states
+				await this.ensureObjectType(`${channelId}.volume`, 'channel', {
+					name: 'Volume',
+					desc: 'Device volume settings',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.volume.volume`, 'state', {
+					name: 'Volume',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.volume.fallVolume`, 'state', {
+					name: 'Fall Volume',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.volume.searchVolume`, 'state', {
+					name: 'Search Volume',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// Sleep and Error as direct states (without channels)
+				await this.ensureObjectType(`${channelId}.sleep`, 'state', {
+					name: 'Sleep',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.error`, 'state', {
+					name: 'Error',
+					type: 'string',
+					role: 'text',
 					read: true,
 					write: false,
 				}, {});
@@ -549,6 +599,32 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (Object.prototype.hasOwnProperty.call(netInfo, 'mac')) {
 					await this.setState(`${channelId}.netInfo.mac`, netInfo.mac != null ? String(netInfo.mac) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(volume, 'volume')) {
+					const volumeValue = Number(volume.volume);
+					if (Number.isFinite(volumeValue)) {
+						await this.setState(`${channelId}.volume.volume`, volumeValue, true);
+					}
+				}
+				if (Object.prototype.hasOwnProperty.call(volume, 'fallVolume')) {
+					const fallVolume = Number(volume.fallVolume);
+					if (Number.isFinite(fallVolume)) {
+						await this.setState(`${channelId}.volume.fallVolume`, fallVolume, true);
+					}
+				}
+				if (Object.prototype.hasOwnProperty.call(volume, 'searchVolume')) {
+					const searchVolume = Number(volume.searchVolume);
+					if (Number.isFinite(searchVolume)) {
+						await this.setState(`${channelId}.volume.searchVolume`, searchVolume, true);
+					}
+				}
+				if (sleep !== undefined && sleep !== null) {
+					const sleepValue = sleep === true || sleep === 1 || sleep === '1';
+					await this.setState(`${channelId}.sleep`, sleepValue, true);
+				}
+				if (errorState !== undefined && errorState !== null) {
+					const errorText = typeof errorState === 'string' ? errorState : JSON.stringify(errorState);
+					await this.setState(`${channelId}.error`, errorText, true);
 				}
 				if (Object.prototype.hasOwnProperty.call(position, 'x') && Number.isFinite(Number(position.x))) {
 					await this.setState(`${channelId}.position.x`, Number(position.x), true);
@@ -746,6 +822,38 @@ class EcovacsGoat extends utils.Adapter {
 				if (netInfo && Object.prototype.hasOwnProperty.call(netInfo, 'mac')) {
 					await this.setState(`${channelId}.netInfo.mac`, netInfo.mac != null ? String(netInfo.mac) : '', true);
 				}
+			}
+
+			if (update.volume !== undefined) {
+				const volume = update.volume && typeof update.volume === 'object' ? update.volume : null;
+				if (volume && Object.prototype.hasOwnProperty.call(volume, 'volume')) {
+					const volumeValue = Number(volume.volume);
+					if (Number.isFinite(volumeValue)) {
+						await this.setState(`${channelId}.volume.volume`, volumeValue, true);
+					}
+				}
+				if (volume && Object.prototype.hasOwnProperty.call(volume, 'fallVolume')) {
+					const fallVolume = Number(volume.fallVolume);
+					if (Number.isFinite(fallVolume)) {
+						await this.setState(`${channelId}.volume.fallVolume`, fallVolume, true);
+					}
+				}
+				if (volume && Object.prototype.hasOwnProperty.call(volume, 'searchVolume')) {
+					const searchVolume = Number(volume.searchVolume);
+					if (Number.isFinite(searchVolume)) {
+						await this.setState(`${channelId}.volume.searchVolume`, searchVolume, true);
+					}
+				}
+			}
+
+			if (update.sleep !== undefined && update.sleep !== null) {
+				const sleepValue = update.sleep === true || update.sleep === 1 || update.sleep === '1';
+				await this.setState(`${channelId}.sleep`, sleepValue, true);
+			}
+
+			if (update.error !== undefined && update.error !== null) {
+				const errorText = typeof update.error === 'string' ? update.error : JSON.stringify(update.error);
+				await this.setState(`${channelId}.error`, errorText, true);
 			}
 
 			if (update.status !== undefined && update.status !== null) {
