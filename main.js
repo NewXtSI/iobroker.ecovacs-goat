@@ -239,6 +239,8 @@ class EcovacsGoat extends utils.Adapter {
 				const mowInfo = device.mowInfo && typeof device.mowInfo === 'object' ? device.mowInfo : {};
 				const lifeSpan = device.lifeSpan && typeof device.lifeSpan === 'object' ? device.lifeSpan : {};
 				const totalStats = device.totalStats && typeof device.totalStats === 'object' ? device.totalStats : {};
+				const chargeState = device.chargeState && typeof device.chargeState === 'object' ? device.chargeState : {};
+				const netInfo = device.netInfo && typeof device.netInfo === 'object' ? device.netInfo : {};
 				const deviceDesc =
 					`ECOVACS Device: ${deviceModelLabel}` +
 					(nickName ? ` | Nickname: ${nickName}` : '') +
@@ -288,6 +290,74 @@ class EcovacsGoat extends utils.Adapter {
 					unit: '%',
 					min: 0,
 					max: 100,
+				}, {});
+
+				// Charging as channel with isCharging/mode states
+				await this.ensureObjectType(`${channelId}.charging`, 'channel', {
+					name: 'Charging',
+					desc: 'Charging state information',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.charging.isCharging`, 'state', {
+					name: 'Is Charging',
+					type: 'boolean',
+					role: 'indicator.charging',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.charging.mode`, 'state', {
+					name: 'Charging Mode',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				// NetInfo as channel with network states
+				await this.ensureObjectType(`${channelId}.netInfo`, 'channel', {
+					name: 'Network Info',
+					desc: 'Device network information',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.netInfo.ip`, 'state', {
+					name: 'IP Address',
+					type: 'string',
+					role: 'info.ip',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.netInfo.ssid`, 'state', {
+					name: 'SSID',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.netInfo.rssi`, 'state', {
+					name: 'RSSI',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.netInfo.wkVer`, 'state', {
+					name: 'Firmware Version',
+					type: 'string',
+					role: 'info.firmware',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.netInfo.mac`, 'state', {
+					name: 'MAC Address',
+					type: 'string',
+					role: 'info.mac',
+					read: true,
+					write: false,
 				}, {});
 
 				// Position as channel with x/y/a states
@@ -451,6 +521,35 @@ class EcovacsGoat extends utils.Adapter {
 				if (device.battery !== undefined && device.battery !== null) {
 					await this.setState(`${channelId}.battery`, Number(device.battery), true);
 				}
+				if (Object.prototype.hasOwnProperty.call(chargeState, 'isCharging')) {
+					const isChargingValue = chargeState.isCharging;
+					const isCharging = isChargingValue === true || isChargingValue === 1 || isChargingValue === '1';
+					await this.setState(`${channelId}.charging.isCharging`, isCharging, true);
+				} else if (device.isCharging !== undefined && device.isCharging !== null) {
+					const isCharging = device.isCharging === true || device.isCharging === 1 || device.isCharging === '1';
+					await this.setState(`${channelId}.charging.isCharging`, isCharging, true);
+				}
+				if (Object.prototype.hasOwnProperty.call(chargeState, 'mode')) {
+					await this.setState(`${channelId}.charging.mode`, chargeState.mode != null ? String(chargeState.mode) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(netInfo, 'ip')) {
+					await this.setState(`${channelId}.netInfo.ip`, netInfo.ip != null ? String(netInfo.ip) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(netInfo, 'ssid')) {
+					await this.setState(`${channelId}.netInfo.ssid`, netInfo.ssid != null ? String(netInfo.ssid) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(netInfo, 'rssi')) {
+					const rssi = Number(netInfo.rssi);
+					if (Number.isFinite(rssi)) {
+						await this.setState(`${channelId}.netInfo.rssi`, rssi, true);
+					}
+				}
+				if (Object.prototype.hasOwnProperty.call(netInfo, 'wkVer')) {
+					await this.setState(`${channelId}.netInfo.wkVer`, netInfo.wkVer != null ? String(netInfo.wkVer) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(netInfo, 'mac')) {
+					await this.setState(`${channelId}.netInfo.mac`, netInfo.mac != null ? String(netInfo.mac) : '', true);
+				}
 				if (Object.prototype.hasOwnProperty.call(position, 'x') && Number.isFinite(Number(position.x))) {
 					await this.setState(`${channelId}.position.x`, Number(position.x), true);
 				}
@@ -612,6 +711,40 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (totalStats) {
 					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+				}
+			}
+
+			if (update.chargeState !== undefined) {
+				const chargeState = update.chargeState && typeof update.chargeState === 'object' ? update.chargeState : null;
+				if (chargeState && Object.prototype.hasOwnProperty.call(chargeState, 'isCharging')) {
+					const isChargingValue = chargeState.isCharging;
+					const isCharging = isChargingValue === true || isChargingValue === 1 || isChargingValue === '1';
+					await this.setState(`${channelId}.charging.isCharging`, isCharging, true);
+				}
+				if (chargeState && Object.prototype.hasOwnProperty.call(chargeState, 'mode')) {
+					await this.setState(`${channelId}.charging.mode`, chargeState.mode != null ? String(chargeState.mode) : '', true);
+				}
+			}
+
+			if (update.netInfo !== undefined) {
+				const netInfo = update.netInfo && typeof update.netInfo === 'object' ? update.netInfo : null;
+				if (netInfo && Object.prototype.hasOwnProperty.call(netInfo, 'ip')) {
+					await this.setState(`${channelId}.netInfo.ip`, netInfo.ip != null ? String(netInfo.ip) : '', true);
+				}
+				if (netInfo && Object.prototype.hasOwnProperty.call(netInfo, 'ssid')) {
+					await this.setState(`${channelId}.netInfo.ssid`, netInfo.ssid != null ? String(netInfo.ssid) : '', true);
+				}
+				if (netInfo && Object.prototype.hasOwnProperty.call(netInfo, 'rssi')) {
+					const rssi = Number(netInfo.rssi);
+					if (Number.isFinite(rssi)) {
+						await this.setState(`${channelId}.netInfo.rssi`, rssi, true);
+					}
+				}
+				if (netInfo && Object.prototype.hasOwnProperty.call(netInfo, 'wkVer')) {
+					await this.setState(`${channelId}.netInfo.wkVer`, netInfo.wkVer != null ? String(netInfo.wkVer) : '', true);
+				}
+				if (netInfo && Object.prototype.hasOwnProperty.call(netInfo, 'mac')) {
+					await this.setState(`${channelId}.netInfo.mac`, netInfo.mac != null ? String(netInfo.mac) : '', true);
 				}
 			}
 
