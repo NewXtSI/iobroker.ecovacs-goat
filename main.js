@@ -442,22 +442,54 @@ class EcovacsGoat extends utils.Adapter {
 				await this.setState(`${channelId}.name`, displayName, true);
 				await this.setState(`${channelId}.model`, deviceModelLabel, true);
 				await this.setState(`${channelId}.status`, 'connected', true);
-				await this.setState(`${channelId}.battery`, device.battery ?? 0, true);
-				await this.setState(`${channelId}.position.x`, Number(position.x) || 0, true);
-				await this.setState(`${channelId}.position.y`, Number(position.y) || 0, true);
-				await this.setState(`${channelId}.position.a`, Number(position.a) || 0, true);
-				await this.setState(`${channelId}.mowInfo.trigger`, mowInfo.trigger != null ? String(mowInfo.trigger) : '', true);
-				await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
-				await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
-				await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
-				await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade?.left) || 0, true);
-				await this.setState(`${channelId}.lifeSpan.blade.total`, Number(lifeSpan.blade?.total) || 0, true);
-				await this.setState(`${channelId}.lifeSpan.lensBrush.left`, Number(lifeSpan.lensBrush?.left) || 0, true);
-				await this.setState(`${channelId}.lifeSpan.lensBrush.total`, Number(lifeSpan.lensBrush?.total) || 0, true);
-				await this.setState(`${channelId}.totalStats.area`, Number(totalStats.area) || 0, true);
-				await this.setState(`${channelId}.totalStats.time`, Number(totalStats.time) || 0, true);
-				await this.setState(`${channelId}.totalStats.count`, Number(totalStats.count) || 0, true);
-				await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+				if (device.battery !== undefined && device.battery !== null) {
+					await this.setState(`${channelId}.battery`, Number(device.battery), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(position, 'x') && Number.isFinite(Number(position.x))) {
+					await this.setState(`${channelId}.position.x`, Number(position.x), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(position, 'y') && Number.isFinite(Number(position.y))) {
+					await this.setState(`${channelId}.position.y`, Number(position.y), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(position, 'a') && Number.isFinite(Number(position.a))) {
+					await this.setState(`${channelId}.position.a`, Number(position.a), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(mowInfo, 'trigger')) {
+					await this.setState(`${channelId}.mowInfo.trigger`, mowInfo.trigger != null ? String(mowInfo.trigger) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(mowInfo, 'other')) {
+					await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(mowInfo, 'state')) {
+					await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
+				}
+				if (Object.prototype.hasOwnProperty.call(mowInfo, 'type')) {
+					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
+				}
+				if (lifeSpan.blade && Object.prototype.hasOwnProperty.call(lifeSpan.blade, 'left') && Number.isFinite(Number(lifeSpan.blade.left))) {
+					await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade.left), true);
+				}
+				if (lifeSpan.blade && Object.prototype.hasOwnProperty.call(lifeSpan.blade, 'total') && Number.isFinite(Number(lifeSpan.blade.total))) {
+					await this.setState(`${channelId}.lifeSpan.blade.total`, Number(lifeSpan.blade.total), true);
+				}
+				if (lifeSpan.lensBrush && Object.prototype.hasOwnProperty.call(lifeSpan.lensBrush, 'left') && Number.isFinite(Number(lifeSpan.lensBrush.left))) {
+					await this.setState(`${channelId}.lifeSpan.lensBrush.left`, Number(lifeSpan.lensBrush.left), true);
+				}
+				if (lifeSpan.lensBrush && Object.prototype.hasOwnProperty.call(lifeSpan.lensBrush, 'total') && Number.isFinite(Number(lifeSpan.lensBrush.total))) {
+					await this.setState(`${channelId}.lifeSpan.lensBrush.total`, Number(lifeSpan.lensBrush.total), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(totalStats, 'area') && Number.isFinite(Number(totalStats.area))) {
+					await this.setState(`${channelId}.totalStats.area`, Number(totalStats.area), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(totalStats, 'time') && Number.isFinite(Number(totalStats.time))) {
+					await this.setState(`${channelId}.totalStats.time`, Number(totalStats.time), true);
+				}
+				if (Object.prototype.hasOwnProperty.call(totalStats, 'count') && Number.isFinite(Number(totalStats.count))) {
+					await this.setState(`${channelId}.totalStats.count`, Number(totalStats.count), true);
+				}
+				if (Object.keys(totalStats).length > 0) {
+					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+				}
 
 				this.devices[channelKey] = device;
 
@@ -487,34 +519,94 @@ class EcovacsGoat extends utils.Adapter {
 			}
 
 			if (update.mowInfo !== undefined) {
-				const mowInfo = update.mowInfo && typeof update.mowInfo === 'object' ? update.mowInfo : {};
-				await this.setState(`${channelId}.mowInfo.trigger`, mowInfo.trigger != null ? String(mowInfo.trigger) : '', true);
-				await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
-				await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
-				await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
+				const mowInfo = update.mowInfo && typeof update.mowInfo === 'object' ? update.mowInfo : null;
+				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'trigger')) {
+					await this.setState(`${channelId}.mowInfo.trigger`, mowInfo.trigger != null ? String(mowInfo.trigger) : '', true);
+				}
+				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'other')) {
+					await this.setState(`${channelId}.mowInfo.other`, mowInfo.other != null ? String(mowInfo.other) : '', true);
+				}
+				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'state')) {
+					await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
+				}
+				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'type')) {
+					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
+				}
 			}
 
 			if (update.position !== undefined) {
-				const position = update.position && typeof update.position === 'object' ? update.position : {};
-				await this.setState(`${channelId}.position.x`, Number(position.x) || 0, true);
-				await this.setState(`${channelId}.position.y`, Number(position.y) || 0, true);
-				await this.setState(`${channelId}.position.a`, Number(position.a) || 0, true);
+				const position = update.position && typeof update.position === 'object' ? update.position : null;
+				if (position && Object.prototype.hasOwnProperty.call(position, 'x')) {
+					const x = Number(position.x);
+					if (Number.isFinite(x)) {
+						await this.setState(`${channelId}.position.x`, x, true);
+					}
+				}
+				if (position && Object.prototype.hasOwnProperty.call(position, 'y')) {
+					const y = Number(position.y);
+					if (Number.isFinite(y)) {
+						await this.setState(`${channelId}.position.y`, y, true);
+					}
+				}
+				if (position && Object.prototype.hasOwnProperty.call(position, 'a')) {
+					const a = Number(position.a);
+					if (Number.isFinite(a)) {
+						await this.setState(`${channelId}.position.a`, a, true);
+					}
+				}
 			}
 
 			if (update.lifeSpan !== undefined) {
-				const lifeSpan = update.lifeSpan && typeof update.lifeSpan === 'object' ? update.lifeSpan : {};
-				await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade?.left) || 0, true);
-				await this.setState(`${channelId}.lifeSpan.blade.total`, Number(lifeSpan.blade?.total) || 0, true);
-				await this.setState(`${channelId}.lifeSpan.lensBrush.left`, Number(lifeSpan.lensBrush?.left) || 0, true);
-				await this.setState(`${channelId}.lifeSpan.lensBrush.total`, Number(lifeSpan.lensBrush?.total) || 0, true);
+				const lifeSpan = update.lifeSpan && typeof update.lifeSpan === 'object' ? update.lifeSpan : null;
+				if (lifeSpan && lifeSpan.blade && Object.prototype.hasOwnProperty.call(lifeSpan.blade, 'left')) {
+					const bladeLeft = Number(lifeSpan.blade.left);
+					if (Number.isFinite(bladeLeft)) {
+						await this.setState(`${channelId}.lifeSpan.blade.left`, bladeLeft, true);
+					}
+				}
+				if (lifeSpan && lifeSpan.blade && Object.prototype.hasOwnProperty.call(lifeSpan.blade, 'total')) {
+					const bladeTotal = Number(lifeSpan.blade.total);
+					if (Number.isFinite(bladeTotal)) {
+						await this.setState(`${channelId}.lifeSpan.blade.total`, bladeTotal, true);
+					}
+				}
+				if (lifeSpan && lifeSpan.lensBrush && Object.prototype.hasOwnProperty.call(lifeSpan.lensBrush, 'left')) {
+					const lensBrushLeft = Number(lifeSpan.lensBrush.left);
+					if (Number.isFinite(lensBrushLeft)) {
+						await this.setState(`${channelId}.lifeSpan.lensBrush.left`, lensBrushLeft, true);
+					}
+				}
+				if (lifeSpan && lifeSpan.lensBrush && Object.prototype.hasOwnProperty.call(lifeSpan.lensBrush, 'total')) {
+					const lensBrushTotal = Number(lifeSpan.lensBrush.total);
+					if (Number.isFinite(lensBrushTotal)) {
+						await this.setState(`${channelId}.lifeSpan.lensBrush.total`, lensBrushTotal, true);
+					}
+				}
 			}
 
 			if (update.totalStats !== undefined) {
-				const totalStats = update.totalStats && typeof update.totalStats === 'object' ? update.totalStats : {};
-				await this.setState(`${channelId}.totalStats.area`, Number(totalStats.area) || 0, true);
-				await this.setState(`${channelId}.totalStats.time`, Number(totalStats.time) || 0, true);
-				await this.setState(`${channelId}.totalStats.count`, Number(totalStats.count) || 0, true);
-				await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+				const totalStats = update.totalStats && typeof update.totalStats === 'object' ? update.totalStats : null;
+				if (totalStats && Object.prototype.hasOwnProperty.call(totalStats, 'area')) {
+					const area = Number(totalStats.area);
+					if (Number.isFinite(area)) {
+						await this.setState(`${channelId}.totalStats.area`, area, true);
+					}
+				}
+				if (totalStats && Object.prototype.hasOwnProperty.call(totalStats, 'time')) {
+					const time = Number(totalStats.time);
+					if (Number.isFinite(time)) {
+						await this.setState(`${channelId}.totalStats.time`, time, true);
+					}
+				}
+				if (totalStats && Object.prototype.hasOwnProperty.call(totalStats, 'count')) {
+					const count = Number(totalStats.count);
+					if (Number.isFinite(count)) {
+						await this.setState(`${channelId}.totalStats.count`, count, true);
+					}
+				}
+				if (totalStats) {
+					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+				}
 			}
 
 			if (update.status !== undefined && update.status !== null) {
