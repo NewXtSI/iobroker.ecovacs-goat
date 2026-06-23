@@ -1,5 +1,22 @@
 {
 	"ecovacs-goat adapter settings": "Adaptereinstellungen für ecovacs-goat",
-	"option1": "Option1",
-	"option2": "Option2"
+	"Authentication": "Authentifizierung",
+	"username_label": "ECOVACS Benutzername",
+	"password_label": "ECOVACS Passwort",
+	"Debug Options": "Debug-Optionen",
+	"debug_auth_label": "Authentifizierung debuggen",
+	"debug_topics_label": "Topics debuggen",
+	"debug_raw_traffic_label": "Raw MQTT-Traffic debuggen",
+	"recreate_structure_label": "Objektstruktur beim Start neu erstellen",
+	"recreate_structure_info": "Wenn aktiviert, werden vorhandene Objekte in das aktuelle Strukturformat migriert. Bei Deaktivierung (empfohlen) werden nur fehlende Objekte hinzugefügt und vorhandene bewahrt.",
+	"devices_title": "Erkannte Geräte",
+	"load_devices": "Geräte laden",
+	"refresh": "Aktualisieren",
+	"device_active": "Aktiv",
+	"device_name": "Gerätename",
+	"device_id": "Geräte-ID",
+	"device_model": "Modell",
+	"device_status": "Status",
+	"device_battery": "Batterie",
+	"no_devices": "Keine Geräte erkannt. Speichern Sie die Konfiguration und starten Sie den Adapter neu, um Geräte zu laden."
 }

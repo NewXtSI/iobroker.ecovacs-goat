@@ -89,6 +89,7 @@
     "debugAuth": false,
     "debugTopics": false,
     "debugRawTraffic": false,
+    "recreateStructureOnStart": false,
     "devices": {}
   },
   "objects": [],

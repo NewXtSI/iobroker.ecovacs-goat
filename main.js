@@ -124,7 +124,7 @@ class EcovacsGoat extends utils.Adapter {
 
 	/**
 	 * Ensure an object exists with the desired type.
-	 * If an object exists with a different type, it is replaced.
+	 * If an object exists with a different type and recreateStructureOnStart is enabled, replace it.
 	 * @param {string} id object id
 	 * @param {'state'|'channel'|'folder'} type desired object type
 	 * @param {ioBroker.StateCommon | ioBroker.ChannelCommon | ioBroker.FolderCommon} common common section
@@ -132,10 +132,16 @@ class EcovacsGoat extends utils.Adapter {
 	 */
 	async ensureObjectType(id, type, common, native = {}) {
 		const existing = await this.getObjectAsync(id);
+		const shouldRecreate = this.config.recreateStructureOnStart === true;
 
-		if (existing && existing.type !== type) {
+		if (existing && existing.type !== type && shouldRecreate) {
 			this.log.info(`Migrating object ${id} from type ${existing.type} to ${type}`);
 			await this.delObjectAsync(id, { recursive: true });
+		} else if (existing && existing.type !== type && !shouldRecreate) {
+			if (this.debugFlags.topics) {
+				this.log.debug(`[Skipped migration] Object ${id} has type ${existing.type} but needs ${type}. Enable recreateStructureOnStart to fix.`);
+			}
+			return; // Skip if type mismatch and flag not set
 		}
 
 		await this.setObjectNotExistsAsync(id, {

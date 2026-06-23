@@ -173,6 +173,14 @@
                     <label for="debugRawTraffic" data-i18n="debug_raw_traffic_label"></label>
                 </div>
             </div>
+
+            <div class="checkbox-item" style="margin-top: 15px;">
+                <input type="checkbox" id="recreateStructureOnStart">
+                <label for="recreateStructureOnStart" data-i18n="recreate_structure_label"></label>
+            </div>
+            <div class="info-message" style="margin-top: 10px;">
+                <strong>Info:</strong> <span data-i18n="recreate_structure_info"></span>
+            </div>
         </div>
 
         <!-- Devices Panel -->
@@ -229,6 +237,9 @@
             if (settings.debugRawTraffic !== undefined) {
                 document.getElementById('debugRawTraffic').checked = settings.debugRawTraffic;
             }
+            if (settings.recreateStructureOnStart !== undefined) {
+                document.getElementById('recreateStructureOnStart').checked = settings.recreateStructureOnStart;
+            }
             if (settings.devices !== undefined) {
                 currentDevices = settings.devices;
             }
@@ -244,6 +255,7 @@
                 debugAuth: document.getElementById('debugAuth').checked,
                 debugTopics: document.getElementById('debugTopics').checked,
                 debugRawTraffic: document.getElementById('debugRawTraffic').checked,
+                recreateStructureOnStart: document.getElementById('recreateStructureOnStart').checked,
                 devices: currentDevices
             };
 
