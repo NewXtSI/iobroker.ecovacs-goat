@@ -237,6 +237,7 @@ class EcovacsGoat extends utils.Adapter {
 				const nickName = device.nick || null;
 				const position = device.position && typeof device.position === 'object' ? device.position : {};
 				const mowInfo = device.mowInfo && typeof device.mowInfo === 'object' ? device.mowInfo : {};
+				const mowCommand = device.mowCommand && typeof device.mowCommand === 'object' ? device.mowCommand : null;
 				const lifeSpan = device.lifeSpan && typeof device.lifeSpan === 'object' ? device.lifeSpan : {};
 				const totalStats = device.totalStats && typeof device.totalStats === 'object' ? device.totalStats : {};
 				const stats = device.stats && typeof device.stats === 'object' ? device.stats : {};
@@ -483,10 +484,71 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
+				await this.ensureObjectType(`${channelId}.mowInfo.cleanStateRaw`, 'state', {
+					name: 'Clean State Raw',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
 				await this.ensureObjectType(`${channelId}.mowState`, 'state', {
 					name: 'Mow State',
 					type: 'string',
 					role: 'info.status',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand`, 'channel', {
+					name: 'Mow Command',
+					desc: 'Last mow command payload',
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand.act`, 'state', {
+					name: 'Action',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand.type`, 'state', {
+					name: 'Type',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand.value`, 'state', {
+					name: 'Value',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand.ts`, 'state', {
+					name: 'Timestamp',
+					type: 'number',
+					role: 'value.time',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand.parsedRaw`, 'state', {
+					name: 'Parsed Raw',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.mowCommand.raw`, 'state', {
+					name: 'Raw Command',
+					type: 'string',
+					role: 'json',
 					read: true,
 					write: false,
 				}, {});
@@ -787,6 +849,27 @@ class EcovacsGoat extends utils.Adapter {
 				if (Object.prototype.hasOwnProperty.call(mowInfo, 'type')) {
 					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
 				}
+				if (Object.prototype.hasOwnProperty.call(mowInfo, 'cleanState') && mowInfo.cleanState !== undefined) {
+					await this.setState(`${channelId}.mowInfo.cleanStateRaw`, mowInfo.cleanState == null ? '' : JSON.stringify(mowInfo.cleanState), true);
+				}
+				if (mowCommand) {
+					if (Object.prototype.hasOwnProperty.call(mowCommand, 'act')) {
+						await this.setState(`${channelId}.mowCommand.act`, mowCommand.act != null ? String(mowCommand.act) : '', true);
+					}
+					if (Object.prototype.hasOwnProperty.call(mowCommand, 'type')) {
+						await this.setState(`${channelId}.mowCommand.type`, mowCommand.type != null ? String(mowCommand.type) : '', true);
+					}
+					if (Object.prototype.hasOwnProperty.call(mowCommand, 'value')) {
+						await this.setState(`${channelId}.mowCommand.value`, mowCommand.value != null ? String(mowCommand.value) : '', true);
+					}
+					if (Object.prototype.hasOwnProperty.call(mowCommand, 'ts') && Number.isFinite(Number(mowCommand.ts))) {
+						await this.setState(`${channelId}.mowCommand.ts`, Number(mowCommand.ts), true);
+					}
+					if (Object.prototype.hasOwnProperty.call(mowCommand, 'parsed') && mowCommand.parsed !== undefined) {
+						await this.setState(`${channelId}.mowCommand.parsedRaw`, mowCommand.parsed == null ? '' : JSON.stringify(mowCommand.parsed), true);
+					}
+					await this.setState(`${channelId}.mowCommand.raw`, JSON.stringify(mowCommand), true);
+				}
 				if (lifeSpan.blade && Object.prototype.hasOwnProperty.call(lifeSpan.blade, 'left') && Number.isFinite(Number(lifeSpan.blade.left))) {
 					await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade.left), true);
 				}
@@ -891,6 +974,34 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'type')) {
 					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
+				}
+				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'cleanState')) {
+					await this.setState(`${channelId}.mowInfo.cleanStateRaw`, mowInfo.cleanState == null ? '' : JSON.stringify(mowInfo.cleanState), true);
+				}
+			}
+
+			if (update.mowCommand !== undefined) {
+				const mowCommand = update.mowCommand && typeof update.mowCommand === 'object' ? update.mowCommand : null;
+				if (mowCommand && Object.prototype.hasOwnProperty.call(mowCommand, 'act')) {
+					await this.setState(`${channelId}.mowCommand.act`, mowCommand.act != null ? String(mowCommand.act) : '', true);
+				}
+				if (mowCommand && Object.prototype.hasOwnProperty.call(mowCommand, 'type')) {
+					await this.setState(`${channelId}.mowCommand.type`, mowCommand.type != null ? String(mowCommand.type) : '', true);
+				}
+				if (mowCommand && Object.prototype.hasOwnProperty.call(mowCommand, 'value')) {
+					await this.setState(`${channelId}.mowCommand.value`, mowCommand.value != null ? String(mowCommand.value) : '', true);
+				}
+				if (mowCommand && Object.prototype.hasOwnProperty.call(mowCommand, 'ts')) {
+					const ts = Number(mowCommand.ts);
+					if (Number.isFinite(ts)) {
+						await this.setState(`${channelId}.mowCommand.ts`, ts, true);
+					}
+				}
+				if (mowCommand && Object.prototype.hasOwnProperty.call(mowCommand, 'parsed')) {
+					await this.setState(`${channelId}.mowCommand.parsedRaw`, mowCommand.parsed == null ? '' : JSON.stringify(mowCommand.parsed), true);
+				}
+				if (mowCommand) {
+					await this.setState(`${channelId}.mowCommand.raw`, JSON.stringify(mowCommand), true);
 				}
 			}
 
