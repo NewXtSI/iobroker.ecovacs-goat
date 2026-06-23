@@ -239,6 +239,11 @@ class EcovacsGoat extends utils.Adapter {
 				const mowInfo = device.mowInfo && typeof device.mowInfo === 'object' ? device.mowInfo : {};
 				const lifeSpan = device.lifeSpan && typeof device.lifeSpan === 'object' ? device.lifeSpan : {};
 				const totalStats = device.totalStats && typeof device.totalStats === 'object' ? device.totalStats : {};
+				const stats = device.stats && typeof device.stats === 'object' ? device.stats : {};
+				const lastTimeStats = device.lastTimeStats && typeof device.lastTimeStats === 'object' ? device.lastTimeStats : {};
+				const protectState = device.protectState;
+				const areaSet = device.areaSet;
+				const areaParameter = device.areaParameter;
 				const chargeState = device.chargeState && typeof device.chargeState === 'object' ? device.chargeState : {};
 				const netInfo = device.netInfo && typeof device.netInfo === 'object' ? device.netInfo : {};
 				const volume = device.volume && typeof device.volume === 'object' ? device.volume : {};
@@ -478,6 +483,14 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
+				await this.ensureObjectType(`${channelId}.mowState`, 'state', {
+					name: 'Mow State',
+					type: 'string',
+					role: 'info.status',
+					read: true,
+					write: false,
+				}, {});
+
 				// LifeSpan as channel with blade/lensBrush substates
 				await this.ensureObjectType(`${channelId}.lifeSpan`, 'channel', {
 					name: 'Life Span',
@@ -536,6 +549,62 @@ class EcovacsGoat extends utils.Adapter {
 					name: 'Area',
 					type: 'number',
 					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// Additional library hooks are stored as raw JSON until their schema is stabilized
+				await this.ensureObjectType(`${channelId}.stats`, 'channel', {
+					name: 'Stats',
+					desc: 'Raw stats payload',
+				}, {});
+				await this.ensureObjectType(`${channelId}.stats.raw`, 'state', {
+					name: 'Raw Stats',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.lastTimeStats`, 'channel', {
+					name: 'Last Time Stats',
+					desc: 'Raw last time stats payload',
+				}, {});
+				await this.ensureObjectType(`${channelId}.lastTimeStats.raw`, 'state', {
+					name: 'Raw Last Time Stats',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.protectState`, 'channel', {
+					name: 'Protect State',
+					desc: 'Raw protect state payload',
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.raw`, 'state', {
+					name: 'Raw Protect State',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
+				await this.ensureObjectType(`${channelId}.area`, 'channel', {
+					name: 'Area',
+					desc: 'Raw area payloads',
+				}, {});
+				await this.ensureObjectType(`${channelId}.area.set`, 'state', {
+					name: 'Area Set',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.area.parameter`, 'state', {
+					name: 'Area Parameter',
+					type: 'string',
+					role: 'json',
 					read: true,
 					write: false,
 				}, {});
@@ -643,6 +712,7 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (Object.prototype.hasOwnProperty.call(mowInfo, 'state')) {
 					await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
+					await this.setState(`${channelId}.mowState`, mowInfo.state != null ? String(mowInfo.state) : '', true);
 				}
 				if (Object.prototype.hasOwnProperty.call(mowInfo, 'type')) {
 					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
@@ -670,6 +740,21 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (Object.keys(totalStats).length > 0) {
 					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+				}
+				if (Object.keys(stats).length > 0) {
+					await this.setState(`${channelId}.stats.raw`, JSON.stringify(stats), true);
+				}
+				if (Object.keys(lastTimeStats).length > 0) {
+					await this.setState(`${channelId}.lastTimeStats.raw`, JSON.stringify(lastTimeStats), true);
+				}
+				if (protectState !== undefined && protectState !== null) {
+					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
+				}
+				if (areaSet !== undefined && areaSet !== null) {
+					await this.setState(`${channelId}.area.set`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+				}
+				if (areaParameter !== undefined && areaParameter !== null) {
+					await this.setState(`${channelId}.area.parameter`, typeof areaParameter === 'string' ? areaParameter : JSON.stringify(areaParameter), true);
 				}
 
 				this.devices[channelKey] = device;
@@ -709,6 +794,7 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'state')) {
 					await this.setState(`${channelId}.mowInfo.state`, mowInfo.state != null ? String(mowInfo.state) : '', true);
+					await this.setState(`${channelId}.mowState`, mowInfo.state != null ? String(mowInfo.state) : '', true);
 				}
 				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'type')) {
 					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
@@ -789,6 +875,42 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
 				}
 			}
+
+			if (update.stats !== undefined) {
+				const stats = update.stats;
+				if (stats !== null && stats !== undefined) {
+					await this.setState(`${channelId}.stats.raw`, typeof stats === 'string' ? stats : JSON.stringify(stats), true);
+				}
+			}
+
+			if (update.lastTimeStats !== undefined) {
+				const lastTimeStats = update.lastTimeStats;
+				if (lastTimeStats !== null && lastTimeStats !== undefined) {
+					await this.setState(`${channelId}.lastTimeStats.raw`, typeof lastTimeStats === 'string' ? lastTimeStats : JSON.stringify(lastTimeStats), true);
+				}
+			}
+
+			if (update.protectState !== undefined) {
+				const protectState = update.protectState;
+				if (protectState !== null && protectState !== undefined) {
+					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
+				}
+			}
+
+			if (update.areaSet !== undefined) {
+				const areaSet = update.areaSet;
+				if (areaSet !== null && areaSet !== undefined) {
+					await this.setState(`${channelId}.area.set`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+				}
+			}
+
+			if (update.areaParameter !== undefined) {
+				const areaParameter = update.areaParameter;
+				if (areaParameter !== null && areaParameter !== undefined) {
+					await this.setState(`${channelId}.area.parameter`, typeof areaParameter === 'string' ? areaParameter : JSON.stringify(areaParameter), true);
+				}
+			}
+
 
 			if (update.chargeState !== undefined) {
 				const chargeState = update.chargeState && typeof update.chargeState === 'object' ? update.chargeState : null;
