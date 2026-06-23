@@ -558,6 +558,27 @@ class EcovacsGoat extends utils.Adapter {
 					name: 'Stats',
 					desc: 'Raw stats payload',
 				}, {});
+				await this.ensureObjectType(`${channelId}.stats.time`, 'state', {
+					name: 'Time',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.stats.area`, 'state', {
+					name: 'Area',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.stats.mowedArea`, 'state', {
+					name: 'Mowed Area',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
 				await this.ensureObjectType(`${channelId}.stats.raw`, 'state', {
 					name: 'Raw Stats',
 					type: 'string',
@@ -581,6 +602,55 @@ class EcovacsGoat extends utils.Adapter {
 				await this.ensureObjectType(`${channelId}.protectState`, 'channel', {
 					name: 'Protect State',
 					desc: 'Raw protect state payload',
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isAnimProtect`, 'state', {
+					name: 'Animation Protect',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isRainProtect`, 'state', {
+					name: 'Rain Protect',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isRainDelay`, 'state', {
+					name: 'Rain Delay',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isEStop`, 'state', {
+					name: 'Emergency Stop',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isLocked`, 'state', {
+					name: 'Locked',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isPinCode`, 'state', {
+					name: 'Pin Code Enabled',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.protectState.isPrepareDataSuccess`, 'state', {
+					name: 'Prepare Data Success',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
 				}, {});
 				await this.ensureObjectType(`${channelId}.protectState.raw`, 'state', {
 					name: 'Raw Protect State',
@@ -742,12 +812,35 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
 				}
 				if (Object.keys(stats).length > 0) {
+					const statsData = stats.body && typeof stats.body === 'object' && stats.body.data && typeof stats.body.data === 'object'
+						? stats.body.data
+						: stats;
+					if (Object.prototype.hasOwnProperty.call(statsData, 'time') && Number.isFinite(Number(statsData.time))) {
+						await this.setState(`${channelId}.stats.time`, Number(statsData.time), true);
+					}
+					if (Object.prototype.hasOwnProperty.call(statsData, 'area') && Number.isFinite(Number(statsData.area))) {
+						await this.setState(`${channelId}.stats.area`, Number(statsData.area), true);
+					}
+					if (Object.prototype.hasOwnProperty.call(statsData, 'mowedArea') && Number.isFinite(Number(statsData.mowedArea))) {
+						await this.setState(`${channelId}.stats.mowedArea`, Number(statsData.mowedArea), true);
+					}
 					await this.setState(`${channelId}.stats.raw`, JSON.stringify(stats), true);
 				}
 				if (Object.keys(lastTimeStats).length > 0) {
 					await this.setState(`${channelId}.lastTimeStats.raw`, JSON.stringify(lastTimeStats), true);
 				}
 				if (protectState !== undefined && protectState !== null) {
+					const protectData = protectState.body && typeof protectState.body === 'object' && protectState.body.data && typeof protectState.body.data === 'object'
+						? protectState.body.data
+						: protectState;
+					if (protectData && typeof protectData === 'object') {
+						for (const key of ['isAnimProtect', 'isRainProtect', 'isRainDelay', 'isEStop', 'isLocked', 'isPinCode', 'isPrepareDataSuccess']) {
+							if (Object.prototype.hasOwnProperty.call(protectData, key)) {
+								const value = protectData[key] === true || protectData[key] === 1 || protectData[key] === '1';
+								await this.setState(`${channelId}.protectState.${key}`, value, true);
+							}
+						}
+					}
 					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
 				}
 				if (areaSet !== undefined && areaSet !== null) {
@@ -879,6 +972,20 @@ class EcovacsGoat extends utils.Adapter {
 			if (update.stats !== undefined) {
 				const stats = update.stats;
 				if (stats !== null && stats !== undefined) {
+					const statsData = stats && typeof stats === 'object' && stats.body && typeof stats.body === 'object' && stats.body.data && typeof stats.body.data === 'object'
+						? stats.body.data
+						: stats;
+					if (statsData && typeof statsData === 'object') {
+						if (Object.prototype.hasOwnProperty.call(statsData, 'time') && Number.isFinite(Number(statsData.time))) {
+							await this.setState(`${channelId}.stats.time`, Number(statsData.time), true);
+						}
+						if (Object.prototype.hasOwnProperty.call(statsData, 'area') && Number.isFinite(Number(statsData.area))) {
+							await this.setState(`${channelId}.stats.area`, Number(statsData.area), true);
+						}
+						if (Object.prototype.hasOwnProperty.call(statsData, 'mowedArea') && Number.isFinite(Number(statsData.mowedArea))) {
+							await this.setState(`${channelId}.stats.mowedArea`, Number(statsData.mowedArea), true);
+						}
+					}
 					await this.setState(`${channelId}.stats.raw`, typeof stats === 'string' ? stats : JSON.stringify(stats), true);
 				}
 			}
@@ -893,6 +1000,17 @@ class EcovacsGoat extends utils.Adapter {
 			if (update.protectState !== undefined) {
 				const protectState = update.protectState;
 				if (protectState !== null && protectState !== undefined) {
+					const protectData = protectState && typeof protectState === 'object' && protectState.body && typeof protectState.body === 'object' && protectState.body.data && typeof protectState.body.data === 'object'
+						? protectState.body.data
+						: protectState;
+					if (protectData && typeof protectData === 'object') {
+						for (const key of ['isAnimProtect', 'isRainProtect', 'isRainDelay', 'isEStop', 'isLocked', 'isPinCode', 'isPrepareDataSuccess']) {
+							if (Object.prototype.hasOwnProperty.call(protectData, key)) {
+								const value = protectData[key] === true || protectData[key] === 1 || protectData[key] === '1';
+								await this.setState(`${channelId}.protectState.${key}`, value, true);
+							}
+						}
+					}
 					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
 				}
 			}
