@@ -285,6 +285,83 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Ensure fwBuryPoint root structure as folder and migrate old single state if needed.
+	 * @param {string} channelId
+	 */
+	async ensureFwBuryPointRoot(channelId) {
+		const rootId = `${channelId}.fwBuryPoint`;
+		const existing = await this.getObjectAsync(rootId);
+		if (existing && existing.type === 'state') {
+			this.log.info(`Migrating ${rootId} from state to folder structure`);
+			await this.delObjectAsync(rootId);
+		}
+
+		await this.ensureObjectType(rootId, 'folder', {
+			name: 'FwBuryPoint',
+			desc: 'Firmware bury point telemetry',
+		}, {});
+
+		await this.ensureObjectType(`${rootId}.raw`, 'state', {
+			name: 'Raw FW Bury Point',
+			type: 'string',
+			role: 'json',
+			read: true,
+			write: false,
+		}, {});
+	}
+
+	/**
+	 * Normalize fwBuryPoint substate name, removing the bd_ prefix.
+	 * @param {string} substate
+	 * @returns {string}
+	 */
+	normalizeFwBuryPointSubstate(substate) {
+		const cleaned = String(substate || '').trim().replace(/^bd_/i, '');
+		return cleaned.replace(/[^a-zA-Z0-9_-]/g, '_');
+	}
+
+	/**
+	 * Process fwBuryPoint payload into dynamic sub-channels under devices.<serial>.fwBuryPoint.
+	 * @param {string} channelId
+	 * @param {any} fwBuryPoint
+	 */
+	async processFwBuryPointUpdate(channelId, fwBuryPoint) {
+		if (fwBuryPoint === undefined || fwBuryPoint === null) {
+			return;
+		}
+
+		await this.ensureFwBuryPointRoot(channelId);
+		const rootId = `${channelId}.fwBuryPoint`;
+		await this.setState(`${rootId}.raw`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
+
+		if (!fwBuryPoint || typeof fwBuryPoint !== 'object') {
+			return;
+		}
+
+		const substate = this.normalizeFwBuryPointSubstate(fwBuryPoint.substate);
+		if (!substate) {
+			return;
+		}
+
+		const subChannelId = `${rootId}.${substate}`;
+		await this.ensureObjectType(subChannelId, 'channel', {
+			name: substate,
+			desc: `FW Bury Point ${substate}`,
+		}, {});
+
+		await this.ensureObjectType(`${subChannelId}.raw`, 'state', {
+			name: 'Raw',
+			type: 'string',
+			role: 'json',
+			read: true,
+			write: false,
+		}, {});
+
+		const subPayload = fwBuryPoint.data !== undefined ? fwBuryPoint.data : fwBuryPoint;
+		await this.setState(`${subChannelId}.raw`, typeof subPayload === 'string' ? subPayload : JSON.stringify(subPayload), true);
+	}
+
+	/**
 	 * Normalize area parameters payload to a plain array.
 	 * Library updates can arrive as array, object wrapper (body.data/data), or JSON string.
 	 * @param {any} payload
@@ -904,13 +981,7 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
-				await this.ensureObjectType(`${channelId}.fwBuryPoint`, 'state', {
-					name: 'FW Bury Point',
-					type: 'string',
-					role: 'json',
-					read: true,
-					write: false,
-				}, {});
+				await this.ensureFwBuryPointRoot(channelId);
 
 				await this.ensureObjectType(`${channelId}.totalStats.time`, 'state', {
 					name: 'Time',
@@ -1103,9 +1174,7 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
 				}
 
-				if (fwBuryPoint !== undefined && fwBuryPoint !== null) {
-					await this.setState(`${channelId}.fwBuryPoint`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
-				}
+				await this.processFwBuryPointUpdate(channelId, fwBuryPoint);
 
 				// Ensure area structure based on areaParameters
 				if (areaParameters !== undefined && areaParameters !== null) {
@@ -1318,9 +1387,7 @@ class EcovacsGoat extends utils.Adapter {
 
 			if (update.fwBuryPoint !== undefined) {
 				const fwBuryPoint = update.fwBuryPoint;
-				if (fwBuryPoint !== null && fwBuryPoint !== undefined) {
-					await this.setState(`${channelId}.fwBuryPoint`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
-				}
+				await this.processFwBuryPointUpdate(channelId, fwBuryPoint);
 			}
 
 			if (update.areaParameters !== undefined || update.areaParameter !== undefined) {
