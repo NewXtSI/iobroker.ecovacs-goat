@@ -190,7 +190,7 @@ class EcovacsGoat extends utils.Adapter {
 
 			// Create/update channels for each area
 			for (const areaParam of areaParameters) {
-				const areaID = String(areaParam.areaID || areaParam.id || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+				const areaID = String(areaParam.areaID ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
 				if (!areaID) {
 					this.log.warn(`Skipping area without valid ID: ${JSON.stringify(areaParam)}`);
 					continue;
@@ -1045,9 +1045,10 @@ class EcovacsGoat extends utils.Adapter {
 
 				// Ensure area structure based on areaParameters
 				if (areaParameters !== undefined && areaParameters !== null) {
-					const areaParamsArray = Array.isArray(areaParameters) ? areaParameters : [];
-					if (areaParamsArray.length > 0) {
-						await this.ensureAreaStructure(channelId, areaParamsArray);
+					if (Array.isArray(areaParameters) && areaParameters.length > 0) {
+						await this.ensureAreaStructure(channelId, areaParameters);
+					} else {
+						this.log.debug(`Ignoring non-array areaParameters for ${channelId}`);
 					}
 				}
 
@@ -1254,9 +1255,10 @@ class EcovacsGoat extends utils.Adapter {
 			if (update.areaParameters !== undefined || update.areaParameter !== undefined) {
 				const areaParameters = update.areaParameters || update.areaParameter;
 				if (areaParameters !== null && areaParameters !== undefined) {
-					const areaParamsArray = Array.isArray(areaParameters) ? areaParameters : [];
-					if (areaParamsArray.length > 0) {
-						await this.ensureAreaStructure(channelId, areaParamsArray);
+					if (Array.isArray(areaParameters) && areaParameters.length > 0) {
+						await this.ensureAreaStructure(channelId, areaParameters);
+					} else {
+						this.log.debug(`Ignoring non-array areaParameters update for ${channelId}`);
 					}
 				}
 			}
