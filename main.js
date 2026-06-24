@@ -844,6 +844,14 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
+				await this.ensureObjectType(`${channelId}.areaSet`, 'state', {
+					name: 'Area Set',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
 				await this.ensureObjectType(`${channelId}.totalStats.time`, 'state', {
 					name: 'Time',
 					type: 'number',
@@ -1030,6 +1038,11 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
 				}
 				
+				// Set areaSet raw JSON
+				if (areaSet !== undefined && areaSet !== null) {
+					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+				}
+
 				// Ensure area structure based on areaParameters
 				if (areaParameters !== undefined && areaParameters !== null) {
 					const areaParamsArray = Array.isArray(areaParameters) ? areaParameters : [];
@@ -1228,6 +1241,13 @@ class EcovacsGoat extends utils.Adapter {
 						}
 					}
 					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
+				}
+			}
+
+			if (update.areaSet !== undefined) {
+				const areaSet = update.areaSet;
+				if (areaSet !== null && areaSet !== undefined) {
+					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
 				}
 			}
 
