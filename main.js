@@ -109,6 +109,10 @@ class EcovacsGoat extends utils.Adapter {
 				desc: 'Container for connected ECOVACS GOAT devices',
 			}, {});
 
+			if (!this.rawStatesEnabled) {
+				await this.cleanupRawStates();
+			}
+
 			// Subscribe to state changes
 			this.subscribeStates('*');
 
@@ -193,6 +197,48 @@ class EcovacsGoat extends utils.Adapter {
 			return;
 		}
 		await this.setState(id, value, ack);
+	}
+
+	/**
+	 * Remove existing raw state objects and values when raw states are disabled.
+	 * Keeps the object tree clean and prevents stale JSON payloads from lingering.
+	 */
+	async cleanupRawStates() {
+		const startkey = `${this.namespace}.devices.`;
+		const endkey = `${this.namespace}.devices.\u9999`;
+
+		let removed = 0;
+		let failed = 0;
+
+		try {
+			const result = await this.getObjectListAsync({ startkey, endkey });
+			const rows = Array.isArray(result && result.rows) ? result.rows : [];
+
+			for (const row of rows) {
+				const fullId = typeof row.id === 'string' ? row.id : '';
+				if (!fullId.startsWith(`${this.namespace}.`)) {
+					continue;
+				}
+
+				const localId = fullId.slice(this.namespace.length + 1);
+				if (!this.isRawStateId(localId)) {
+					continue;
+				}
+
+				try {
+					await this.delStateAsync(localId).catch(() => {});
+					await this.delObjectAsync(localId);
+					removed++;
+				} catch (error) {
+					failed++;
+					this.log.warn(`Failed to remove raw state ${localId}: ${error.message}`);
+				}
+			}
+
+			this.log.info(`Raw state cleanup finished: removed=${removed}, failed=${failed}`);
+		} catch (error) {
+			this.log.warn(`Raw state cleanup failed: ${error.message}`);
+		}
 	}
 
 	/**
