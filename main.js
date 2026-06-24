@@ -321,6 +321,15 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Normalize a fwBuryPoint data field key for ioBroker object IDs.
+	 * @param {string} fieldKey
+	 * @returns {string}
+	 */
+	normalizeFwBuryPointFieldKey(fieldKey) {
+		return String(fieldKey || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+	}
+
+	/**
 	 * Process fwBuryPoint payload into dynamic sub-channels under devices.<serial>.fwBuryPoint.
 	 * @param {string} channelId
 	 * @param {any} fwBuryPoint
@@ -359,6 +368,45 @@ class EcovacsGoat extends utils.Adapter {
 
 		const subPayload = fwBuryPoint.data !== undefined ? fwBuryPoint.data : fwBuryPoint;
 		await this.setState(`${subChannelId}.raw`, typeof subPayload === 'string' ? subPayload : JSON.stringify(subPayload), true);
+
+		if (!subPayload || typeof subPayload !== 'object' || Array.isArray(subPayload)) {
+			return;
+		}
+
+		for (const [fieldKey, fieldValue] of Object.entries(subPayload)) {
+			const normalizedFieldKey = this.normalizeFwBuryPointFieldKey(fieldKey);
+			if (!normalizedFieldKey || fieldValue === undefined) {
+				continue;
+			}
+
+			const isComplex = fieldValue === null || typeof fieldValue === 'object';
+			const stateId = `${subChannelId}.${normalizedFieldKey}`;
+			const stateType = isComplex
+				? 'string'
+				: (typeof fieldValue === 'boolean' ? 'boolean' : (typeof fieldValue === 'number' ? 'number' : 'string'));
+			const stateRole = isComplex
+				? 'json'
+				: (typeof fieldValue === 'boolean' ? 'indicator' : (typeof fieldValue === 'number' ? 'value' : 'text'));
+
+			await this.ensureObjectType(stateId, 'state', {
+				name: fieldKey,
+				type: stateType,
+				role: stateRole,
+				read: true,
+				write: false,
+			}, {});
+
+			if (stateType === 'number') {
+				const numericValue = Number(fieldValue);
+				if (Number.isFinite(numericValue)) {
+					await this.setState(stateId, numericValue, true);
+				}
+			} else if (stateType === 'boolean') {
+				await this.setState(stateId, Boolean(fieldValue), true);
+			} else {
+				await this.setState(stateId, isComplex ? JSON.stringify(fieldValue) : String(fieldValue), true);
+			}
+		}
 	}
 
 	/**
