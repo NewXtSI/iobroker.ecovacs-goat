@@ -629,6 +629,76 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
+				await this.ensureObjectType(`${channelId}.charging.raw`, 'state', {
+					name: 'Charge Info Raw',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
+				// MapState
+				await this.ensureObjectType(`${channelId}.mapState`, 'channel', {
+					name: 'Map State',
+					desc: 'Map display state',
+				}, {});
+				await this.ensureObjectType(`${channelId}.mapState.state`, 'state', {
+					name: 'State',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.mapState.expandState`, 'state', {
+					name: 'Expand State',
+					type: 'string',
+					role: 'text',
+					read: true,
+					write: false,
+				}, {});
+
+				// Geolocation
+				await this.ensureObjectType(`${channelId}.geolocation`, 'channel', {
+					name: 'Geolocation',
+					desc: 'Device GPS position',
+				}, {});
+				await this.ensureObjectType(`${channelId}.geolocation.latitude`, 'state', {
+					name: 'Latitude',
+					type: 'number',
+					role: 'value.gps.latitude',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.geolocation.longitude`, 'state', {
+					name: 'Longitude',
+					type: 'number',
+					role: 'value.gps.longitude',
+					read: true,
+					write: false,
+				}, {});
+				await this.ensureObjectType(`${channelId}.geolocation.enable`, 'state', {
+					name: 'Enabled',
+					type: 'boolean',
+					role: 'indicator',
+					read: true,
+					write: false,
+				}, {});
+
+				// Info fields (lazy-loaded via getInfo)
+				await this.ensureObjectType(`${channelId}.info`, 'folder', {
+					name: 'Device Info',
+					desc: 'Lazy-loaded device configuration fields',
+				}, {});
+				for (const infoField of ['cutEfficiency', 'obstacleHeight', 'cutHeight', 'cutDirection', 'autoCutDirection', 'rainDelay', 'animProtect', 'timeZone', 'customCutMode', 'borderSwitch']) {
+					await this.ensureObjectType(`${channelId}.info.${infoField}`, 'state', {
+						name: infoField,
+						type: 'string',
+						role: 'json',
+						read: true,
+						write: false,
+					}, {});
+				}
+
 				// NetInfo as channel with network states
 				await this.ensureObjectType(`${channelId}.netInfo`, 'channel', {
 					name: 'Network Info',
@@ -1465,6 +1535,42 @@ class EcovacsGoat extends utils.Adapter {
 				}
 				if (chargeState && Object.prototype.hasOwnProperty.call(chargeState, 'mode')) {
 					await this.setState(`${channelId}.charging.mode`, chargeState.mode != null ? String(chargeState.mode) : '', true);
+				}
+			}
+
+			if (update.chargeInfo !== undefined && update.chargeInfo !== null) {
+				await this.setState(`${channelId}.charging.raw`, typeof update.chargeInfo === 'string' ? update.chargeInfo : JSON.stringify(update.chargeInfo), true);
+			}
+
+			if (update.mapState !== undefined && update.mapState !== null) {
+				const mapState = update.mapState;
+				if (mapState && typeof mapState === 'object') {
+					if (mapState.state != null) {
+						await this.setState(`${channelId}.mapState.state`, String(mapState.state), true);
+					}
+					if (mapState.expandState != null) {
+						await this.setState(`${channelId}.mapState.expandState`, String(mapState.expandState), true);
+					}
+				}
+			}
+
+			if (update.geolocation !== undefined && update.geolocation !== null) {
+				const geo = update.geolocation;
+				if (geo && geo.geoLocation) {
+					const lat = Number(geo.geoLocation.latitude);
+					const lon = Number(geo.geoLocation.longitude);
+					if (Number.isFinite(lat)) await this.setState(`${channelId}.geolocation.latitude`, lat, true);
+					if (Number.isFinite(lon)) await this.setState(`${channelId}.geolocation.longitude`, lon, true);
+				}
+				if (geo && geo.enable !== undefined) {
+					await this.setState(`${channelId}.geolocation.enable`, Boolean(geo.enable), true);
+				}
+			}
+
+			// Info fields (lazy-loaded)
+			for (const infoField of ['cutEfficiency', 'obstacleHeight', 'cutHeight', 'cutDirection', 'autoCutDirection', 'rainDelay', 'animProtect', 'timeZone', 'customCutMode', 'borderSwitch']) {
+				if (update[infoField] !== undefined && update[infoField] !== null) {
+					await this.setState(`${channelId}.info.${infoField}`, typeof update[infoField] === 'string' ? update[infoField] : JSON.stringify(update[infoField]), true);
 				}
 			}
 
