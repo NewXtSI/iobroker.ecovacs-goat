@@ -152,6 +152,128 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Ensure area structure based on areaParameters array
+	 * Creates dynamic channels for each area with its parameters
+	 * @param {string} channelId - Device channel ID (e.g., 'devices.device_serial')
+	 * @param {Array} areaParameters - Array of area parameter objects with areaID, mowHeightLevel, cutMode, obstacleHeight
+	 */
+	async ensureAreaStructure(channelId, areaParameters) {
+		try {
+			if (!Array.isArray(areaParameters) || areaParameters.length === 0) {
+				this.log.debug(`No area parameters for ${channelId}, skipping area structure creation`);
+				return;
+			}
+
+			// Create Areas folder
+			await this.ensureObjectType(`${channelId}.areas`, 'folder', {
+				name: 'Areas',
+				desc: 'Mowing areas with individual parameters',
+			}, {});
+
+			// Get existing area channels to clean up removed ones
+			const existingAreas = new Set();
+			try {
+				const areasFolder = await this.getObjectAsync(`${channelId}.areas`);
+				if (areasFolder && areasFolder.children) {
+					areasFolder.children.forEach(child => {
+						const areaIdMatch = child.match(/.*\.areas\.(.+)$/);
+						if (areaIdMatch) {
+							existingAreas.add(areaIdMatch[1]);
+						}
+					});
+				}
+			} catch (err) {
+				this.log.debug(`Could not retrieve existing areas for ${channelId}: ${err.message}`);
+			}
+
+			const currentAreaIds = new Set();
+
+			// Create/update channels for each area
+			for (const areaParam of areaParameters) {
+				const areaID = String(areaParam.areaID || areaParam.id || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+				if (!areaID) {
+					this.log.warn(`Skipping area without valid ID: ${JSON.stringify(areaParam)}`);
+					continue;
+				}
+
+				currentAreaIds.add(areaID);
+				const areaChannelId = `${channelId}.areas.${areaID}`;
+
+				// Create area channel
+				await this.ensureObjectType(areaChannelId, 'channel', {
+					name: `Area ${areaID}`,
+					desc: `Parameters for area ${areaID}`,
+				}, {});
+
+				// Create mowHeightLevel state
+				await this.ensureObjectType(`${areaChannelId}.mowHeightLevel`, 'state', {
+					name: 'Mow Height Level',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// Create cutMode state
+				await this.ensureObjectType(`${areaChannelId}.cutMode`, 'state', {
+					name: 'Cut Mode',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// Create obstacleHeight state
+				await this.ensureObjectType(`${areaChannelId}.obstacleHeight`, 'state', {
+					name: 'Obstacle Height',
+					type: 'number',
+					role: 'value',
+					read: true,
+					write: false,
+				}, {});
+
+				// Create raw JSON state
+				await this.ensureObjectType(`${areaChannelId}.raw`, 'state', {
+					name: 'Raw Area Parameters',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
+				// Set initial values
+				if (Number.isFinite(Number(areaParam.mowHeightLevel))) {
+					await this.setState(`${areaChannelId}.mowHeightLevel`, Number(areaParam.mowHeightLevel), true);
+				}
+				if (Number.isFinite(Number(areaParam.cutMode))) {
+					await this.setState(`${areaChannelId}.cutMode`, Number(areaParam.cutMode), true);
+				}
+				if (Number.isFinite(Number(areaParam.obstacleHeight))) {
+					await this.setState(`${areaChannelId}.obstacleHeight`, Number(areaParam.obstacleHeight), true);
+				}
+				await this.setState(`${areaChannelId}.raw`, JSON.stringify(areaParam), true);
+			}
+
+			// Clean up removed areas
+			for (const existingAreaId of existingAreas) {
+				if (!currentAreaIds.has(existingAreaId)) {
+					const removedAreaChannelId = `${channelId}.areas.${existingAreaId}`;
+					this.log.info(`Removing area channel ${removedAreaChannelId} (no longer in areaParameters)`);
+					try {
+						await this.delObjectAsync(removedAreaChannelId, { recursive: true });
+					} catch (err) {
+						this.log.warn(`Failed to remove area channel ${removedAreaChannelId}: ${err.message}`);
+					}
+				}
+			}
+
+			this.log.debug(`Area structure ensured for ${channelId} with ${areaParameters.length} area(s)`);
+		} catch (error) {
+			this.log.error(`Error ensuring area structure for ${channelId}: ${error.message}`);
+		}
+	}
+
+	/**
 	 * Initialize connection to external ECOVACS library
 	 */
 	async initializeConnection() {
@@ -244,7 +366,7 @@ class EcovacsGoat extends utils.Adapter {
 				const lastTimeStats = device.lastTimeStats && typeof device.lastTimeStats === 'object' ? device.lastTimeStats : {};
 				const protectState = device.protectState;
 				const areaSet = device.areaSet;
-				const areaParameter = device.areaParameter;
+				const areaParameters = device.areaParameters || device.areaParameter; // Callback may provide either
 				const chargeState = device.chargeState && typeof device.chargeState === 'object' ? device.chargeState : {};
 				const netInfo = device.netInfo && typeof device.netInfo === 'object' ? device.netInfo : {};
 				const volume = device.volume && typeof device.volume === 'object' ? device.volume : {};
@@ -722,25 +844,6 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
-				await this.ensureObjectType(`${channelId}.area`, 'channel', {
-					name: 'Area',
-					desc: 'Raw area payloads',
-				}, {});
-				await this.ensureObjectType(`${channelId}.area.set`, 'state', {
-					name: 'Area Set',
-					type: 'string',
-					role: 'json',
-					read: true,
-					write: false,
-				}, {});
-				await this.ensureObjectType(`${channelId}.area.parameter`, 'state', {
-					name: 'Area Parameter',
-					type: 'string',
-					role: 'json',
-					read: true,
-					write: false,
-				}, {});
-
 				await this.ensureObjectType(`${channelId}.totalStats.time`, 'state', {
 					name: 'Time',
 					type: 'number',
@@ -926,11 +1029,13 @@ class EcovacsGoat extends utils.Adapter {
 					}
 					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
 				}
-				if (areaSet !== undefined && areaSet !== null) {
-					await this.setState(`${channelId}.area.set`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
-				}
-				if (areaParameter !== undefined && areaParameter !== null) {
-					await this.setState(`${channelId}.area.parameter`, typeof areaParameter === 'string' ? areaParameter : JSON.stringify(areaParameter), true);
+				
+				// Ensure area structure based on areaParameters
+				if (areaParameters !== undefined && areaParameters !== null) {
+					const areaParamsArray = Array.isArray(areaParameters) ? areaParameters : [];
+					if (areaParamsArray.length > 0) {
+						await this.ensureAreaStructure(channelId, areaParamsArray);
+					}
 				}
 
 				this.devices[channelKey] = device;
@@ -1126,17 +1231,13 @@ class EcovacsGoat extends utils.Adapter {
 				}
 			}
 
-			if (update.areaSet !== undefined) {
-				const areaSet = update.areaSet;
-				if (areaSet !== null && areaSet !== undefined) {
-					await this.setState(`${channelId}.area.set`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
-				}
-			}
-
-			if (update.areaParameter !== undefined) {
-				const areaParameter = update.areaParameter;
-				if (areaParameter !== null && areaParameter !== undefined) {
-					await this.setState(`${channelId}.area.parameter`, typeof areaParameter === 'string' ? areaParameter : JSON.stringify(areaParameter), true);
+			if (update.areaParameters !== undefined || update.areaParameter !== undefined) {
+				const areaParameters = update.areaParameters || update.areaParameter;
+				if (areaParameters !== null && areaParameters !== undefined) {
+					const areaParamsArray = Array.isArray(areaParameters) ? areaParameters : [];
+					if (areaParamsArray.length > 0) {
+						await this.ensureAreaStructure(channelId, areaParamsArray);
+					}
 				}
 			}
 
