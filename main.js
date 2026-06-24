@@ -417,6 +417,7 @@ class EcovacsGoat extends utils.Adapter {
 				const lastTimeStats = device.lastTimeStats && typeof device.lastTimeStats === 'object' ? device.lastTimeStats : {};
 				const protectState = device.protectState;
 				const areaSet = device.areaSet;
+				const fwBuryPoint = device.fwBuryPoint;
 				const areaParameters = this.normalizeAreaParameters(device.areaParameters || device.areaParameter);
 				const chargeState = device.chargeState && typeof device.chargeState === 'object' ? device.chargeState : {};
 				const netInfo = device.netInfo && typeof device.netInfo === 'object' ? device.netInfo : {};
@@ -903,6 +904,14 @@ class EcovacsGoat extends utils.Adapter {
 					write: false,
 				}, {});
 
+				await this.ensureObjectType(`${channelId}.fwBuryPoint`, 'state', {
+					name: 'FW Bury Point',
+					type: 'string',
+					role: 'json',
+					read: true,
+					write: false,
+				}, {});
+
 				await this.ensureObjectType(`${channelId}.totalStats.time`, 'state', {
 					name: 'Time',
 					type: 'number',
@@ -1092,6 +1101,10 @@ class EcovacsGoat extends utils.Adapter {
 				// Set areaSet raw JSON
 				if (areaSet !== undefined && areaSet !== null) {
 					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+				}
+
+				if (fwBuryPoint !== undefined && fwBuryPoint !== null) {
+					await this.setState(`${channelId}.fwBuryPoint`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
 				}
 
 				// Ensure area structure based on areaParameters
@@ -1300,6 +1313,13 @@ class EcovacsGoat extends utils.Adapter {
 				const areaSet = update.areaSet;
 				if (areaSet !== null && areaSet !== undefined) {
 					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+				}
+			}
+
+			if (update.fwBuryPoint !== undefined) {
+				const fwBuryPoint = update.fwBuryPoint;
+				if (fwBuryPoint !== null && fwBuryPoint !== undefined) {
+					await this.setState(`${channelId}.fwBuryPoint`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
 				}
 			}
 
