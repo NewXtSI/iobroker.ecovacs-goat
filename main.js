@@ -384,17 +384,24 @@ class EcovacsGoat extends utils.Adapter {
 			const stateType = isComplex
 				? 'string'
 				: (typeof fieldValue === 'boolean' ? 'boolean' : (typeof fieldValue === 'number' ? 'number' : 'string'));
+			const isVoltage = !isComplex && typeof fieldValue === 'number' && /voltage/i.test(fieldKey);
 			const stateRole = isComplex
 				? 'json'
-				: (typeof fieldValue === 'boolean' ? 'indicator' : (typeof fieldValue === 'number' ? 'value' : 'text'));
+				: (typeof fieldValue === 'boolean' ? 'indicator' : (isVoltage ? 'value.voltage' : (typeof fieldValue === 'number' ? 'value' : 'text')));
+			const stateUnit = isVoltage ? 'mV' : undefined;
 
-			await this.ensureObjectType(stateId, 'state', {
+			const stateCommon = {
 				name: fieldKey,
 				type: stateType,
 				role: stateRole,
 				read: true,
 				write: false,
-			}, {});
+			};
+			if (stateUnit) {
+				stateCommon.unit = stateUnit;
+			}
+
+			await this.ensureObjectType(stateId, 'state', stateCommon, {});
 
 			if (stateType === 'number') {
 				const numericValue = Number(fieldValue);
