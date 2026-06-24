@@ -417,6 +417,125 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Ensure settings root folder.
+	 * @param {string} channelId
+	 */
+	async ensureSettingsRoot(channelId) {
+		await this.ensureObjectType(`${channelId}.settings`, 'folder', {
+			name: 'Settings',
+			desc: 'Lazy-loaded device configuration fields',
+		}, {});
+	}
+
+	/**
+	 * Normalize settings sub-field key for ioBroker object IDs.
+	 * @param {string} fieldKey
+	 * @returns {string}
+	 */
+	normalizeSettingFieldKey(fieldKey) {
+		return String(fieldKey || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+	}
+
+	/**
+	 * Convert known boolean-like setting fields.
+	 * @param {string} key
+	 * @param {any} value
+	 * @returns {boolean | null}
+	 */
+	parseSettingBooleanValue(key, value) {
+		if (key !== 'enable') {
+			return null;
+		}
+		if (typeof value === 'boolean') {
+			return value;
+		}
+		if (typeof value === 'number') {
+			if (value === 1) return true;
+			if (value === 0) return false;
+		}
+		if (typeof value === 'string') {
+			const normalized = value.trim().toLowerCase();
+			if (normalized === '1' || normalized === 'true') return true;
+			if (normalized === '0' || normalized === 'false') return false;
+		}
+		return null;
+	}
+
+	/**
+	 * Process one lazy-loaded settings field into channel/raw/parsed substates.
+	 * @param {string} channelId
+	 * @param {string} fieldName
+	 * @param {any} fieldValue
+	 */
+	async processSettingsFieldUpdate(channelId, fieldName, fieldValue) {
+		if (fieldValue === undefined || fieldValue === null) {
+			return;
+		}
+
+		await this.ensureSettingsRoot(channelId);
+		const settingChannelId = `${channelId}.settings.${fieldName}`;
+		const existing = await this.getObjectAsync(settingChannelId);
+		if (existing && existing.type === 'state') {
+			this.log.info(`Migrating ${settingChannelId} from state to channel`);
+			await this.delObjectAsync(settingChannelId);
+		}
+
+		await this.ensureObjectType(settingChannelId, 'channel', {
+			name: fieldName,
+			desc: `Setting ${fieldName}`,
+		}, {});
+
+		await this.ensureObjectType(`${settingChannelId}.raw`, 'state', {
+			name: 'Raw',
+			type: 'string',
+			role: 'json',
+			read: true,
+			write: false,
+		}, {});
+
+		await this.setState(`${settingChannelId}.raw`, typeof fieldValue === 'string' ? fieldValue : JSON.stringify(fieldValue), true);
+
+		if (!fieldValue || typeof fieldValue !== 'object' || Array.isArray(fieldValue)) {
+			return;
+		}
+
+		for (const [key, value] of Object.entries(fieldValue)) {
+			const normalizedKey = this.normalizeSettingFieldKey(key);
+			if (!normalizedKey || value === undefined) {
+				continue;
+			}
+
+			const boolValue = this.parseSettingBooleanValue(key, value);
+			const isComplex = value !== null && typeof value === 'object';
+			const stateId = `${settingChannelId}.${normalizedKey}`;
+			const stateType = boolValue !== null
+				? 'boolean'
+				: (isComplex ? 'string' : (typeof value === 'number' ? 'number' : 'string'));
+			const stateRole = boolValue !== null
+				? 'indicator'
+				: (isComplex ? 'json' : (typeof value === 'number' ? 'value' : 'text'));
+			await this.ensureObjectType(stateId, 'state', {
+				name: key,
+				type: stateType,
+				role: stateRole,
+				read: true,
+				write: false,
+			}, {});
+
+			if (boolValue !== null) {
+				await this.setState(stateId, boolValue, true);
+			} else if (stateType === 'number') {
+				const numericValue = Number(value);
+				if (Number.isFinite(numericValue)) {
+					await this.setState(stateId, numericValue, true);
+				}
+			} else {
+				await this.setState(stateId, isComplex ? JSON.stringify(value) : String(value), true);
+			}
+		}
+	}
+
+	/**
 	 * Normalize area parameters payload to a plain array.
 	 * Library updates can arrive as array, object wrapper (body.data/data), or JSON string.
 	 * @param {any} payload
@@ -685,19 +804,7 @@ class EcovacsGoat extends utils.Adapter {
 				}, {});
 
 				// Info fields (lazy-loaded via getInfo)
-				await this.ensureObjectType(`${channelId}.settings`, 'folder', {
-					name: 'Settings',
-					desc: 'Lazy-loaded device configuration fields',
-				}, {});
-				for (const infoField of ['cutEfficiency', 'obstacleHeight', 'cutHeight', 'cutDirection', 'autoCutDirection', 'rainDelay', 'animProtect', 'timeZone', 'customCutMode', 'borderSwitch']) {
-					await this.ensureObjectType(`${channelId}.settings.${infoField}`, 'state', {
-						name: infoField,
-						type: 'string',
-						role: 'json',
-						read: true,
-						write: false,
-					}, {});
-				}
+				await this.ensureSettingsRoot(channelId);
 
 				// NetInfo as channel with network states
 				await this.ensureObjectType(`${channelId}.netInfo`, 'channel', {
@@ -1570,7 +1677,7 @@ class EcovacsGoat extends utils.Adapter {
 			// Info fields (lazy-loaded)
 			for (const infoField of ['cutEfficiency', 'obstacleHeight', 'cutHeight', 'cutDirection', 'autoCutDirection', 'rainDelay', 'animProtect', 'timeZone', 'customCutMode', 'borderSwitch']) {
 				if (update[infoField] !== undefined && update[infoField] !== null) {
-					await this.setState(`${channelId}.settings.${infoField}`, typeof update[infoField] === 'string' ? update[infoField] : JSON.stringify(update[infoField]), true);
+					await this.processSettingsFieldUpdate(channelId, infoField, update[infoField]);
 				}
 			}
 
