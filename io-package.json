@@ -90,6 +90,7 @@
     "debugTopics": false,
     "debugRawTraffic": false,
     "rawMessages": false,
+    "rawStates": true,
     "recreateStructureOnStart": false,
     "devices": {}
   },

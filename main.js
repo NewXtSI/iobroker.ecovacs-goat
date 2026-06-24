@@ -33,6 +33,7 @@ class EcovacsGoat extends utils.Adapter {
 			topics: false,
 			rawTraffic: false,
 		};
+		this.rawStatesEnabled = true;
 	}
 
 	/**
@@ -46,6 +47,7 @@ class EcovacsGoat extends utils.Adapter {
 			this.debugFlags.auth = this.config.debugAuth || false;
 			this.debugFlags.topics = this.config.debugTopics || false;
 			this.debugFlags.rawTraffic = this.config.debugRawTraffic || false;
+			this.rawStatesEnabled = this.config.rawStates !== false;
 
 			if (this.debugFlags.auth) {
 				this.log.debug('[DEBUG] Authentication debugging enabled');
@@ -55,6 +57,9 @@ class EcovacsGoat extends utils.Adapter {
 			}
 			if (this.debugFlags.rawTraffic) {
 				this.log.debug('[DEBUG] Raw MQTT traffic debugging enabled');
+			}
+			if (!this.rawStatesEnabled) {
+				this.log.info('Raw JSON state updates are disabled by configuration (rawStates=false)');
 			}
 
 			// Validate configuration
@@ -131,6 +136,10 @@ class EcovacsGoat extends utils.Adapter {
 	 * @param {object} native native section
 	 */
 	async ensureObjectType(id, type, common, native = {}) {
+		if (type === 'state' && this.isRawStateId(id) && !this.rawStatesEnabled) {
+			return;
+		}
+
 		const existing = await this.getObjectAsync(id);
 		const shouldRecreate = this.config.recreateStructureOnStart === true;
 
@@ -149,6 +158,41 @@ class EcovacsGoat extends utils.Adapter {
 			common,
 			native,
 		});
+	}
+
+	/**
+	 * Determine whether a state ID is considered a raw JSON state.
+	 * @param {string} id
+	 * @returns {boolean}
+	 */
+	isRawStateId(id) {
+		return id.endsWith('.raw') || id.endsWith('Raw') || id.endsWith('.areaSet');
+	}
+
+	/**
+	 * Create a raw state only when raw states are enabled.
+	 * @param {string} id
+	 * @param {ioBroker.StateCommon} common
+	 * @param {object} native
+	 */
+	async ensureRawState(id, common, native = {}) {
+		if (!this.rawStatesEnabled || !this.isRawStateId(id)) {
+			return;
+		}
+		await this.ensureObjectType(id, 'state', common, native);
+	}
+
+	/**
+	 * Write a raw state only when raw states are enabled.
+	 * @param {string} id
+	 * @param {any} value
+	 * @param {boolean} ack
+	 */
+	async setRawState(id, value, ack = true) {
+		if (!this.rawStatesEnabled || !this.isRawStateId(id)) {
+			return;
+		}
+		await this.setState(id, value, ack);
 	}
 
 	/**
@@ -262,7 +306,7 @@ class EcovacsGoat extends utils.Adapter {
 					const obstacleHeightValue = Number(areaParam.obstacleHeight);
 					await this.setState(`${areaChannelId}.obstacleHeight`, obstacleHeightValue, true);
 				}
-				await this.setState(`${areaChannelId}.raw`, JSON.stringify(areaParam), true);
+				await this.setRawState(`${areaChannelId}.raw`, JSON.stringify(areaParam), true);
 			}
 
 			// Clean up removed areas
@@ -341,7 +385,7 @@ class EcovacsGoat extends utils.Adapter {
 
 		await this.ensureFwBuryPointRoot(channelId);
 		const rootId = `${channelId}.fwBuryPoint`;
-		await this.setState(`${rootId}.raw`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
+		await this.setRawState(`${rootId}.raw`, typeof fwBuryPoint === 'string' ? fwBuryPoint : JSON.stringify(fwBuryPoint), true);
 
 		if (!fwBuryPoint || typeof fwBuryPoint !== 'object') {
 			return;
@@ -367,7 +411,7 @@ class EcovacsGoat extends utils.Adapter {
 		}, {});
 
 		const subPayload = fwBuryPoint.data !== undefined ? fwBuryPoint.data : fwBuryPoint;
-		await this.setState(`${subChannelId}.raw`, typeof subPayload === 'string' ? subPayload : JSON.stringify(subPayload), true);
+		await this.setRawState(`${subChannelId}.raw`, typeof subPayload === 'string' ? subPayload : JSON.stringify(subPayload), true);
 
 		if (!subPayload || typeof subPayload !== 'object' || Array.isArray(subPayload)) {
 			return;
@@ -522,7 +566,7 @@ class EcovacsGoat extends utils.Adapter {
 			write: false,
 		}, {});
 
-		await this.setState(`${settingChannelId}.raw`, typeof fieldValue === 'string' ? fieldValue : JSON.stringify(fieldValue), true);
+		await this.setRawState(`${settingChannelId}.raw`, typeof fieldValue === 'string' ? fieldValue : JSON.stringify(fieldValue), true);
 
 		if (!fieldValue || typeof fieldValue !== 'object' || Array.isArray(fieldValue)) {
 			return;
@@ -1361,7 +1405,7 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
 				}
 				if (Object.prototype.hasOwnProperty.call(mowInfo, 'cleanState') && mowInfo.cleanState !== undefined) {
-					await this.setState(`${channelId}.mowInfo.cleanStateRaw`, mowInfo.cleanState == null ? '' : JSON.stringify(mowInfo.cleanState), true);
+					await this.setRawState(`${channelId}.mowInfo.cleanStateRaw`, mowInfo.cleanState == null ? '' : JSON.stringify(mowInfo.cleanState), true);
 				}
 				if (mowCommand) {
 					if (Object.prototype.hasOwnProperty.call(mowCommand, 'act')) {
@@ -1377,9 +1421,9 @@ class EcovacsGoat extends utils.Adapter {
 						await this.setState(`${channelId}.mowCommand.ts`, Number(mowCommand.ts), true);
 					}
 					if (Object.prototype.hasOwnProperty.call(mowCommand, 'parsed') && mowCommand.parsed !== undefined) {
-						await this.setState(`${channelId}.mowCommand.parsedRaw`, mowCommand.parsed == null ? '' : JSON.stringify(mowCommand.parsed), true);
+						await this.setRawState(`${channelId}.mowCommand.parsedRaw`, mowCommand.parsed == null ? '' : JSON.stringify(mowCommand.parsed), true);
 					}
-					await this.setState(`${channelId}.mowCommand.raw`, JSON.stringify(mowCommand), true);
+					await this.setRawState(`${channelId}.mowCommand.raw`, JSON.stringify(mowCommand), true);
 				}
 				if (lifeSpan.blade && Object.prototype.hasOwnProperty.call(lifeSpan.blade, 'left') && Number.isFinite(Number(lifeSpan.blade.left))) {
 					await this.setState(`${channelId}.lifeSpan.blade.left`, Number(lifeSpan.blade.left), true);
@@ -1403,7 +1447,7 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.totalStats.count`, Number(totalStats.count), true);
 				}
 				if (Object.keys(totalStats).length > 0) {
-					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+					await this.setRawState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
 				}
 				if (Object.keys(stats).length > 0) {
 					const statsData = stats.body && typeof stats.body === 'object' && stats.body.data && typeof stats.body.data === 'object'
@@ -1418,10 +1462,10 @@ class EcovacsGoat extends utils.Adapter {
 					if (Object.prototype.hasOwnProperty.call(statsData, 'mowedArea') && Number.isFinite(Number(statsData.mowedArea))) {
 						await this.setState(`${channelId}.stats.mowedArea`, Number(statsData.mowedArea), true);
 					}
-					await this.setState(`${channelId}.stats.raw`, JSON.stringify(stats), true);
+					await this.setRawState(`${channelId}.stats.raw`, JSON.stringify(stats), true);
 				}
 				if (Object.keys(lastTimeStats).length > 0) {
-					await this.setState(`${channelId}.lastTimeStats.raw`, JSON.stringify(lastTimeStats), true);
+					await this.setRawState(`${channelId}.lastTimeStats.raw`, JSON.stringify(lastTimeStats), true);
 				}
 				if (protectState !== undefined && protectState !== null) {
 					const protectData = protectState.body && typeof protectState.body === 'object' && protectState.body.data && typeof protectState.body.data === 'object'
@@ -1435,12 +1479,12 @@ class EcovacsGoat extends utils.Adapter {
 							}
 						}
 					}
-					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
+					await this.setRawState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
 				}
 				
 				// Set areaSet raw JSON
 				if (areaSet !== undefined && areaSet !== null) {
-					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+					await this.setRawState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
 				}
 
 				await this.processFwBuryPointUpdate(channelId, fwBuryPoint);
@@ -1497,7 +1541,7 @@ class EcovacsGoat extends utils.Adapter {
 					await this.setState(`${channelId}.mowInfo.type`, mowInfo.type != null ? String(mowInfo.type) : '', true);
 				}
 				if (mowInfo && Object.prototype.hasOwnProperty.call(mowInfo, 'cleanState')) {
-					await this.setState(`${channelId}.mowInfo.cleanStateRaw`, mowInfo.cleanState == null ? '' : JSON.stringify(mowInfo.cleanState), true);
+					await this.setRawState(`${channelId}.mowInfo.cleanStateRaw`, mowInfo.cleanState == null ? '' : JSON.stringify(mowInfo.cleanState), true);
 				}
 			}
 
@@ -1519,10 +1563,10 @@ class EcovacsGoat extends utils.Adapter {
 					}
 				}
 				if (mowCommand && Object.prototype.hasOwnProperty.call(mowCommand, 'parsed')) {
-					await this.setState(`${channelId}.mowCommand.parsedRaw`, mowCommand.parsed == null ? '' : JSON.stringify(mowCommand.parsed), true);
+					await this.setRawState(`${channelId}.mowCommand.parsedRaw`, mowCommand.parsed == null ? '' : JSON.stringify(mowCommand.parsed), true);
 				}
 				if (mowCommand) {
-					await this.setState(`${channelId}.mowCommand.raw`, JSON.stringify(mowCommand), true);
+					await this.setRawState(`${channelId}.mowCommand.raw`, JSON.stringify(mowCommand), true);
 				}
 			}
 
@@ -1597,7 +1641,7 @@ class EcovacsGoat extends utils.Adapter {
 					}
 				}
 				if (totalStats) {
-					await this.setState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
+					await this.setRawState(`${channelId}.totalStats.raw`, JSON.stringify(totalStats), true);
 				}
 			}
 
@@ -1618,14 +1662,14 @@ class EcovacsGoat extends utils.Adapter {
 							await this.setState(`${channelId}.stats.mowedArea`, Number(statsData.mowedArea), true);
 						}
 					}
-					await this.setState(`${channelId}.stats.raw`, typeof stats === 'string' ? stats : JSON.stringify(stats), true);
+					await this.setRawState(`${channelId}.stats.raw`, typeof stats === 'string' ? stats : JSON.stringify(stats), true);
 				}
 			}
 
 			if (update.lastTimeStats !== undefined) {
 				const lastTimeStats = update.lastTimeStats;
 				if (lastTimeStats !== null && lastTimeStats !== undefined) {
-					await this.setState(`${channelId}.lastTimeStats.raw`, typeof lastTimeStats === 'string' ? lastTimeStats : JSON.stringify(lastTimeStats), true);
+					await this.setRawState(`${channelId}.lastTimeStats.raw`, typeof lastTimeStats === 'string' ? lastTimeStats : JSON.stringify(lastTimeStats), true);
 				}
 			}
 
@@ -1643,14 +1687,14 @@ class EcovacsGoat extends utils.Adapter {
 							}
 						}
 					}
-					await this.setState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
+					await this.setRawState(`${channelId}.protectState.raw`, typeof protectState === 'string' ? protectState : JSON.stringify(protectState), true);
 				}
 			}
 
 			if (update.areaSet !== undefined) {
 				const areaSet = update.areaSet;
 				if (areaSet !== null && areaSet !== undefined) {
-					await this.setState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
+					await this.setRawState(`${channelId}.areaSet`, typeof areaSet === 'string' ? areaSet : JSON.stringify(areaSet), true);
 				}
 			}
 
@@ -1683,7 +1727,7 @@ class EcovacsGoat extends utils.Adapter {
 			}
 
 			if (update.chargeInfo !== undefined && update.chargeInfo !== null) {
-				await this.setState(`${channelId}.charging.raw`, typeof update.chargeInfo === 'string' ? update.chargeInfo : JSON.stringify(update.chargeInfo), true);
+				await this.setRawState(`${channelId}.charging.raw`, typeof update.chargeInfo === 'string' ? update.chargeInfo : JSON.stringify(update.chargeInfo), true);
 			}
 
 			if (update.mapState !== undefined && update.mapState !== null) {

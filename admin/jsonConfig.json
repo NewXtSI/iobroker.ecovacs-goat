@@ -70,6 +70,13 @@
           "sm": 12,
           "newLine": true,
           "help": "Enable Goat rawMessage callback logging (all raw callback messages)"
+        },
+        "rawStates": {
+          "type": "checkbox",
+          "label": "Raw JSON States",
+          "sm": 12,
+          "newLine": true,
+          "help": "Create and update raw JSON states (disable to reduce state traffic)"
         }
       }
     }
