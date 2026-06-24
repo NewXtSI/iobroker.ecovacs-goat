@@ -462,6 +462,35 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Return optional states mapping for known settings fields.
+	 * @param {string} fieldName
+	 * @param {string} key
+	 * @returns {Record<string, string> | null}
+	 */
+	getSettingStatesMapping(fieldName, key) {
+		if (key !== 'level') {
+			return null;
+		}
+
+		if (fieldName === 'cutEfficiency') {
+			return {
+				'1': 'Effizient (0,5m/s)',
+				'2': 'Fein (0,35 m/s)',
+			};
+		}
+
+		if (fieldName === 'obstacleHeight') {
+			return {
+				'1': 'Flacher Untergrund (>10cm)',
+				'2': 'Normale Umgebung (>15cm)',
+				'3': 'Hohes Gras (>20cm)',
+			};
+		}
+
+		return null;
+	}
+
+	/**
 	 * Process one lazy-loaded settings field into channel/raw/parsed substates.
 	 * @param {string} channelId
 	 * @param {string} fieldName
@@ -508,19 +537,27 @@ class EcovacsGoat extends utils.Adapter {
 			const boolValue = this.parseSettingBooleanValue(key, value);
 			const isComplex = value !== null && typeof value === 'object';
 			const stateId = `${settingChannelId}.${normalizedKey}`;
+			const statesMapping = this.getSettingStatesMapping(fieldName, key);
 			const stateType = boolValue !== null
 				? 'boolean'
 				: (isComplex ? 'string' : (typeof value === 'number' ? 'number' : 'string'));
 			const stateRole = boolValue !== null
 				? 'indicator'
 				: (isComplex ? 'json' : (typeof value === 'number' ? 'value' : 'text'));
-			await this.ensureObjectType(stateId, 'state', {
+			const stateCommon = {
 				name: key,
 				type: stateType,
 				role: stateRole,
 				read: true,
 				write: false,
-			}, {});
+			};
+			if (statesMapping) {
+				stateCommon.states = statesMapping;
+			}
+			await this.ensureObjectType(stateId, 'state', stateCommon, {});
+			if (statesMapping) {
+				await this.extendObjectAsync(stateId, { common: { states: statesMapping } });
+			}
 
 			if (boolValue !== null) {
 				await this.setState(stateId, boolValue, true);
