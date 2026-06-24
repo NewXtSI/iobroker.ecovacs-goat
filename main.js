@@ -221,6 +221,10 @@ class EcovacsGoat extends utils.Adapter {
 					role: 'value',
 					read: true,
 					write: false,
+					states: {
+						'1': 'Effizient (0,5m/s)',
+						'2': 'Fein (0,35 m/s)',
+					},
 				}, {});
 
 				// Create obstacleHeight state
@@ -230,24 +234,11 @@ class EcovacsGoat extends utils.Adapter {
 					role: 'value',
 					read: true,
 					write: false,
-				}, {});
-
-				// Create cutMode text state
-				await this.ensureObjectType(`${areaChannelId}.cutModeText`, 'state', {
-					name: 'Cut Mode (Text)',
-					type: 'string',
-					role: 'text',
-					read: true,
-					write: false,
-				}, {});
-
-				// Create obstacleHeight text state
-				await this.ensureObjectType(`${areaChannelId}.obstacleHeightText`, 'state', {
-					name: 'Obstacle Height (Text)',
-					type: 'string',
-					role: 'text',
-					read: true,
-					write: false,
+					states: {
+						'1': 'Flacher Untergrund (>10cm)',
+						'2': 'Normale Umgebung (>15cm)',
+						'3': 'Hohes Gras (>20cm)',
+					},
 				}, {});
 
 				// Create raw JSON state
@@ -266,12 +257,10 @@ class EcovacsGoat extends utils.Adapter {
 				if (Number.isFinite(Number(areaParam.cutMode))) {
 					const cutModeValue = Number(areaParam.cutMode);
 					await this.setState(`${areaChannelId}.cutMode`, cutModeValue, true);
-					await this.setState(`${areaChannelId}.cutModeText`, this.getCutModeLabel(cutModeValue), true);
 				}
 				if (Number.isFinite(Number(areaParam.obstacleHeight))) {
 					const obstacleHeightValue = Number(areaParam.obstacleHeight);
 					await this.setState(`${areaChannelId}.obstacleHeight`, obstacleHeightValue, true);
-					await this.setState(`${areaChannelId}.obstacleHeightText`, this.getObstacleHeightLabel(obstacleHeightValue), true);
 				}
 				await this.setState(`${areaChannelId}.raw`, JSON.stringify(areaParam), true);
 			}
@@ -333,40 +322,6 @@ class EcovacsGoat extends utils.Adapter {
 		}
 
 		return [];
-	}
-
-	/**
-	 * Map cut mode numeric value to human-readable label.
-	 * @param {number} cutMode
-	 * @returns {string}
-	 */
-	getCutModeLabel(cutMode) {
-		switch (cutMode) {
-			case 1:
-				return 'Effizient (0,5m/s)';
-			case 2:
-				return 'Fein (0,35 m/s)';
-			default:
-				return '';
-		}
-	}
-
-	/**
-	 * Map obstacle height numeric value to human-readable label.
-	 * @param {number} obstacleHeight
-	 * @returns {string}
-	 */
-	getObstacleHeightLabel(obstacleHeight) {
-		switch (obstacleHeight) {
-			case 1:
-				return 'Flacher Untergrund (>10cm)';
-			case 2:
-				return 'Normale Umgebung (>15cm)';
-			case 3:
-				return 'Hohes Gras (>20cm)';
-			default:
-				return '';
-		}
 	}
 
 	/**
