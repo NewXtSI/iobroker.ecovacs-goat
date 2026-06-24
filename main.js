@@ -685,12 +685,12 @@ class EcovacsGoat extends utils.Adapter {
 				}, {});
 
 				// Info fields (lazy-loaded via getInfo)
-				await this.ensureObjectType(`${channelId}.info`, 'folder', {
-					name: 'Device Info',
+				await this.ensureObjectType(`${channelId}.settings`, 'folder', {
+					name: 'Settings',
 					desc: 'Lazy-loaded device configuration fields',
 				}, {});
 				for (const infoField of ['cutEfficiency', 'obstacleHeight', 'cutHeight', 'cutDirection', 'autoCutDirection', 'rainDelay', 'animProtect', 'timeZone', 'customCutMode', 'borderSwitch']) {
-					await this.ensureObjectType(`${channelId}.info.${infoField}`, 'state', {
+					await this.ensureObjectType(`${channelId}.settings.${infoField}`, 'state', {
 						name: infoField,
 						type: 'string',
 						role: 'json',
@@ -1570,7 +1570,7 @@ class EcovacsGoat extends utils.Adapter {
 			// Info fields (lazy-loaded)
 			for (const infoField of ['cutEfficiency', 'obstacleHeight', 'cutHeight', 'cutDirection', 'autoCutDirection', 'rainDelay', 'animProtect', 'timeZone', 'customCutMode', 'borderSwitch']) {
 				if (update[infoField] !== undefined && update[infoField] !== null) {
-					await this.setState(`${channelId}.info.${infoField}`, typeof update[infoField] === 'string' ? update[infoField] : JSON.stringify(update[infoField]), true);
+					await this.setState(`${channelId}.settings.${infoField}`, typeof update[infoField] === 'string' ? update[infoField] : JSON.stringify(update[infoField]), true);
 				}
 			}
 
