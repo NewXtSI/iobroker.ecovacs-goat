@@ -274,6 +274,46 @@ class EcovacsGoat extends utils.Adapter {
 	}
 
 	/**
+	 * Normalize area parameters payload to a plain array.
+	 * Library updates can arrive as array, object wrapper (body.data/data), or JSON string.
+	 * @param {any} payload
+	 * @returns {Array<Object>}
+	 */
+	normalizeAreaParameters(payload) {
+		if (Array.isArray(payload)) {
+			return payload;
+		}
+
+		if (typeof payload === 'string') {
+			try {
+				const parsed = JSON.parse(payload);
+				return this.normalizeAreaParameters(parsed);
+			} catch {
+				return [];
+			}
+		}
+
+		if (!payload || typeof payload !== 'object') {
+			return [];
+		}
+
+		if (Array.isArray(payload.areaParameters)) {
+			return payload.areaParameters;
+		}
+		if (Array.isArray(payload.areaParameter)) {
+			return payload.areaParameter;
+		}
+		if (Array.isArray(payload.data)) {
+			return payload.data;
+		}
+		if (payload.body && Array.isArray(payload.body.data)) {
+			return payload.body.data;
+		}
+
+		return [];
+	}
+
+	/**
 	 * Initialize connection to external ECOVACS library
 	 */
 	async initializeConnection() {
@@ -366,7 +406,7 @@ class EcovacsGoat extends utils.Adapter {
 				const lastTimeStats = device.lastTimeStats && typeof device.lastTimeStats === 'object' ? device.lastTimeStats : {};
 				const protectState = device.protectState;
 				const areaSet = device.areaSet;
-				const areaParameters = device.areaParameters || device.areaParameter; // Callback may provide either
+				const areaParameters = this.normalizeAreaParameters(device.areaParameters || device.areaParameter);
 				const chargeState = device.chargeState && typeof device.chargeState === 'object' ? device.chargeState : {};
 				const netInfo = device.netInfo && typeof device.netInfo === 'object' ? device.netInfo : {};
 				const volume = device.volume && typeof device.volume === 'object' ? device.volume : {};
@@ -1045,10 +1085,10 @@ class EcovacsGoat extends utils.Adapter {
 
 				// Ensure area structure based on areaParameters
 				if (areaParameters !== undefined && areaParameters !== null) {
-					if (Array.isArray(areaParameters) && areaParameters.length > 0) {
+					if (areaParameters.length > 0) {
 						await this.ensureAreaStructure(channelId, areaParameters);
 					} else {
-						this.log.debug(`Ignoring non-array areaParameters for ${channelId}`);
+						this.log.debug(`No usable areaParameters for ${channelId}`);
 					}
 				}
 
@@ -1253,13 +1293,12 @@ class EcovacsGoat extends utils.Adapter {
 			}
 
 			if (update.areaParameters !== undefined || update.areaParameter !== undefined) {
-				const areaParameters = update.areaParameters || update.areaParameter;
-				if (areaParameters !== null && areaParameters !== undefined) {
-					if (Array.isArray(areaParameters) && areaParameters.length > 0) {
-						await this.ensureAreaStructure(channelId, areaParameters);
-					} else {
-						this.log.debug(`Ignoring non-array areaParameters update for ${channelId}`);
-					}
+				const areaParameters = this.normalizeAreaParameters(update.areaParameters || update.areaParameter);
+				if (areaParameters.length > 0) {
+					await this.ensureAreaStructure(channelId, areaParameters);
+				} else {
+					const rawPayload = update.areaParameters !== undefined ? update.areaParameters : update.areaParameter;
+					this.log.debug(`Ignoring unusable areaParameters update for ${channelId}: ${typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload)}`);
 				}
 			}
 
