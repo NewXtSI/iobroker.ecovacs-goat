@@ -89,6 +89,7 @@
     "debugAuth": false,
     "debugTopics": false,
     "debugRawTraffic": false,
+    "rawMessages": false,
     "recreateStructureOnStart": false,
     "devices": {}
   },

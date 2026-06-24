@@ -63,6 +63,13 @@
           "sm": 12,
           "newLine": true,
           "help": "Log all raw MQTT messages (verbose)"
+        },
+        "rawMessages": {
+          "type": "checkbox",
+          "label": "RawMessages",
+          "sm": 12,
+          "newLine": true,
+          "help": "Enable Goat rawMessage callback logging (all raw callback messages)"
         }
       }
     }
