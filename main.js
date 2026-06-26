@@ -7,7 +7,7 @@
  */
 
 const utils = require('@iobroker/adapter-core');
-const EcovacsClient = require('./lib/ecovacs-client');
+const EcovacsClientV2 = require('./lib/ecovacs-client-v2');
 
 class EcovacsGoat extends utils.Adapter {
 	/**
@@ -116,8 +116,8 @@ class EcovacsGoat extends utils.Adapter {
 			// Subscribe to state changes
 			this.subscribeStates('*');
 
-			// Initialize ECOVACS client
-			this.ecovacsClient = new EcovacsClient(this, this.config);
+			// Initialize ECOVACS client (API V2)
+			this.ecovacsClient = new EcovacsClientV2(this, this.config);
 
 			// Initialize connection to external ECOVACS library
 			await this.initializeConnection();
@@ -711,17 +711,9 @@ class EcovacsGoat extends utils.Adapter {
 				throw new Error('ECOVACS client not initialized');
 			}
 
-			const connected = await this.ecovacsClient.connect();
-
-			if (connected) {
-				await this.setState('info.connection', true, true);
-				this.isConnected = true;
-				this.log.info('Connected to ECOVACS service');
-			} else {
-				await this.setState('info.connection', false, true);
-				this.isConnected = false;
-				this.log.warn('Failed to connect to ECOVACS service');
-			}
+			// API V2 connection is initiated in performDeviceDiscovery
+			// This stub remains for backward compatibility
+			this.log.debug('Connection will be initialized during device discovery');
 		} catch (error) {
 			this.log.error(`Failed to initialize connection: ${error.message}`);
 			await this.setState('info.connection', false, true);
@@ -734,32 +726,43 @@ class EcovacsGoat extends utils.Adapter {
 	 */
 	async performDeviceDiscovery() {
 		try {
-			if (!this.isConnected || !this.ecovacsClient) {
-				this.log.debug('Not connected, skipping device discovery');
+			if (!this.ecovacsClient) {
+				this.log.debug('ECOVACS client not initialized');
 				return;
 			}
 
-			this.log.debug('Performing device discovery...');
+			this.log.debug('Performing device discovery (API V2)...');
 
-			const discoveryResult = await this.ecovacsClient.discoverDevices();
-			const discoveredDevices = Array.isArray(discoveryResult) ? discoveryResult : [];
-
-			this.log.info(`Device discovery returned ${discoveredDevices.length} device(s)`);
-			if (!Array.isArray(discoveryResult)) {
-				this.log.warn(`Device discovery returned non-array result type: ${typeof discoveryResult}`);
+			// Connect to cloud
+			const connected = await this.ecovacsClient.connect();
+			if (!connected) {
+				this.log.error('Failed to connect to ECOVACS cloud');
+				await this.setState('info.connection', false, true);
+				this.isConnected = false;
+				return;
 			}
+
+			this.isConnected = true;
+			await this.setState('info.connection', true, true);
+			this.log.info('Connected to ECOVACS cloud');
+
+			// Get all devices
+			const discoveredDevices = await this.ecovacsClient.getDevices();
+			this.log.info(`Device discovery returned ${discoveredDevices.length} device(s)`);
 			
 			if (discoveredDevices.length > 0) {
-				this.log.debug(`Discovered devices: ${JSON.stringify(discoveredDevices).substring(0, 500)}`);
+				this.log.debug(`Discovered devices: ${discoveredDevices.map(d => `${d.name || d.id}`).join(', ')}`);
 				await this.processDiscoveredDevices(discoveredDevices);
 			} else {
-				this.log.warn('No devices discovered. Check your ECOVACS account and credentials.');
+				this.log.warn('No GOAT devices discovered. Check your ECOVACS account and credentials.');
 			}
 
 			this.log.debug('Device discovery completed');
 		} catch (error) {
 			this.log.error(`Device discovery failed: ${error.message}`);
 			this.log.debug(`Discovery error details: ${error.stack}`);
+			await this.setState('info.connection', false, true);
+			this.isConnected = false;
 		}
 	}
 
@@ -1546,13 +1549,22 @@ class EcovacsGoat extends utils.Adapter {
 
 				this.devices[channelKey] = device;
 
-				if (this.ecovacsClient) {
-					await this.ecovacsClient.setupDeviceCallbacks(device, channelKey, this.handleRealtimeDeviceUpdate.bind(this));
-				}
-			}
+			// Setup realtime callbacks using the API V2 device reference
+			if (this.ecovacsClient && device.api2Device) {
+				await this.ecovacsClient.setupDeviceCallbacks(device.api2Device, channelKey, this.handleRealtimeDeviceUpdate.bind(this));
 
-			this.log.info(`Discovered and configured ${devices.length} device(s)`);
-			await this.setState('info.lastUpdate', Date.now(), true);
+				// Get initial state snapshot
+				const snapshot = await this.ecovacsClient.getInitialSnapshot(device.api2Device);
+				if (Object.keys(snapshot).length > 0) {
+					await this.handleRealtimeDeviceUpdate(channelKey, snapshot);
+				}
+			} else if (this.ecovacsClient && !device.api2Device) {
+				this.log.warn(`Device ${channelKey} missing api2Device reference`);
+			}
+		}
+
+		this.log.info(`Discovered and configured ${devices.length} device(s)`);
+		await this.setState('info.lastUpdate', Date.now(), true);
 		} catch (error) {
 			this.log.error(`Error processing discovered devices: ${error.message}`);
 		}

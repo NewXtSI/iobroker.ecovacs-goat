@@ -27,7 +27,7 @@
     "@iobroker/adapter-core": "^3.4.1"
   },
   "optionalDependencies": {
-    "node-ecovacs.js": "github:NewXtSI/node-ecovacs.js"
+    "node-ecovacs.js": "github:NewXtSI/node-ecovacs.js#feature/api-2.0-base"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",
